@@ -1,0 +1,281 @@
+{% extends 'home.html' %}
+{% block content %}
+<div class="main-container">
+    <div class="list-section">
+        <div class="row mt-3">
+            <!-- Profile Information Card -->
+            <div class="col-lg-6 mb-4 mt-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-user me-2"></i>Profile Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="profileForm">
+                            <div class="mb-3">
+                                <label for="username" class="form-label fw-bold">Username</label>
+                                <input type="text" class="form-control" id="username" value="{{ username }}" readonly>
+                                <small class="form-text text-muted">Cannot be changed</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="name" class="form-label fw-bold">Full Name</label>
+                                <input type="text" class="form-control" id="name" name="name" value="{{ name or '' }}" maxlength="100" placeholder="Enter your full name">
+                                <small class="form-text text-muted">Max 100 characters</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label fw-bold">Email Address</label>
+                                <input type="email" class="form-control" id="email" name="email" value="{{ email or '' }}" maxlength="150" placeholder="your.email@example.com">
+                                <small class="form-text text-muted">We'll never share your email</small>
+                            </div>
+                            <div class="mb-4">
+                                <label for="github_username" class="form-label fw-bold">GitHub Username</label>
+                                <input type="text" class="form-control" id="github_username" name="github_username"
+                                       value="{{ github_username or '' }}" placeholder="your-github-username" maxlength="39">
+                                <small class="form-text text-muted">Optional - for portfolio linking</small>
+                            </div>
+                            <button type="submit" class="btn btn-primary" id="saveProfileBtn" style="width: 100%;">
+                                <i class="fas fa-save me-2"></i><span id="profileBtnText">Save Changes</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Change Password Card -->
+            <div class="col-lg-6 mb-4 mt-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-lock me-2"></i>Change Password</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="passwordForm">
+                            <div class="mb-3">
+                                <label for="current_password" class="form-label fw-bold">Current Password</label>
+                                <div class="password-field">
+                                    <input type="password" class="form-control" id="current_password" name="current_password" required>
+                                    <i class="fas fa-eye toggle-pwd-icon" data-target="current_password"></i>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="new_password" class="form-label fw-bold">New Password</label>
+                                <div class="password-field">
+                                    <input type="password" class="form-control" id="new_password" name="new_password" required>
+                                    <i class="fas fa-eye toggle-pwd-icon" data-target="new_password"></i>
+                                </div>
+                                <div id="passwordStrength" class="mt-2"></div>
+                            </div>
+                            <div class="mb-4">
+                                <label for="confirm_password" class="form-label fw-bold">Confirm Password</label>
+                                <div class="password-field">
+                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                                    <i class="fas fa-eye toggle-pwd-icon" data-target="confirm_password"></i>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-warning" id="changePasswordBtn" style="width: 100%;">
+                                <i class="fas fa-key me-2"></i><span id="passwordBtnText">Change Password</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .password-field {
+        position: relative;
+    }
+    .password-field .form-control {
+        padding-right: 2.5rem;
+    }
+    .toggle-pwd-icon {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #6c757d;
+        pointer-events: auto;
+        z-index: 10;
+        font-size: 0.95rem;
+        transition: color 0.15s ease-in-out;
+    }
+    .toggle-pwd-icon:hover {
+        color: #495057;
+    }
+    .form-text {
+        font-size: 0.875rem;
+    }
+    .strength-meter {
+        height: 4px;
+        border-radius: 2px;
+        margin-top: 8px;
+    }
+    .strength-weak { background-color: #dc3545; }
+    .strength-fair { background-color: #ffc107; }
+    .strength-good { background-color: #0dcaf0; }
+    .strength-strong { background-color: #198754; }
+</style>
+
+<script>
+    // Toggle password visibility
+    document.querySelectorAll('.toggle-pwd-icon').forEach(icon => {
+        icon.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            const input = document.getElementById(targetId);
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                this.classList.remove('fa-eye');
+                this.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                this.classList.remove('fa-eye-slash');
+                this.classList.add('fa-eye');
+            }
+        });
+    });
+
+    // Password strength indicator
+    function checkPasswordStrength(password) {
+        const strengthDiv = document.getElementById('passwordStrength');
+        if (!password) {
+            strengthDiv.innerHTML = '';
+            return;
+        }
+
+        let strength = 0;
+        if (password.length >= 8) strength++;
+        if (password.match(/[a-z]/)) strength++;
+        if (password.match(/[A-Z]/)) strength++;
+        if (password.match(/[0-9]/)) strength++;
+        if (password.match(/[^a-zA-Z0-9]/)) strength++;
+
+        let label = '';
+        let className = '';
+        
+        if (strength <= 1) {
+            label = '❌ Weak';
+            className = 'strength-weak';
+        } else if (strength <= 2) {
+            label = '⚠️ Fair';
+            className = 'strength-fair';
+        } else if (strength <= 3) {
+            label = '✓ Good';
+            className = 'strength-good';
+        } else {
+            label = '✓✓ Strong';
+            className = 'strength-strong';
+        }
+
+        strengthDiv.innerHTML = `<div class="strength-meter ${className}"></div><small class="text-muted">${label}</small>`;
+    }
+
+    document.getElementById('new_password').addEventListener('input', function() {
+        checkPasswordStrength(this.value);
+    });
+
+    // Profile form submission
+    document.getElementById('profileForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('name').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const github_username = document.getElementById('github_username').value.trim() || null;
+        
+        // Validation
+        if (name && name.length < 2) {
+            notify('error', 'Full name must be at least 2 characters');
+            return;
+        }
+        if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+            notify('error', 'Please enter a valid email address');
+            return;
+        }
+        
+        const btn = document.getElementById('saveProfileBtn');
+        const btnText = document.getElementById('profileBtnText');
+        const originalText = btnText.textContent;
+        
+        btn.disabled = true;
+        btnText.textContent = 'Saving...';
+        
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, github_username })
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                notify('success', 'Profile updated successfully!');
+            } else {
+                notify('error', result.message || 'Error updating profile');
+            }
+        } catch (error) {
+            notify('error', 'Connection error. Please try again.');
+        } finally {
+            btn.disabled = false;
+            btnText.textContent = originalText;
+        }
+    });
+
+    // Password form submission
+    document.getElementById('passwordForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const current_password = document.getElementById('current_password').value;
+        const new_password = document.getElementById('new_password').value;
+        const confirm_password = document.getElementById('confirm_password').value;
+
+        // Validation
+        if (new_password !== confirm_password) {
+            notify('error', 'New passwords do not match');
+            document.getElementById('confirm_password').classList.add('is-invalid');
+            return;
+        }
+
+        if (current_password === new_password) {
+            notify('error', 'New password must be different from current password');
+            return;
+        }
+
+        const btn = document.getElementById('changePasswordBtn');
+        const btnText = document.getElementById('passwordBtnText');
+        const originalText = btnText.textContent;
+        
+        btn.disabled = true;
+        btnText.textContent = 'Changing...';
+        
+        try {
+            const response = await fetch('/api/profile/password', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ current_password, new_password })
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                notify('success', 'Password changed successfully!');
+                document.getElementById('passwordForm').reset();
+                document.getElementById('passwordStrength').innerHTML = '';
+            } else {
+                notify('error', result.message || 'Error changing password');
+            }
+        } catch (error) {
+            notify('error', 'Connection error. Please try again.');
+        } finally {
+            btn.disabled = false;
+            btnText.textContent = originalText;
+        }
+    });
+
+    // Clear validation styling on input
+    document.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', function() {
+            this.classList.remove('is-invalid');
+        });
+    });
+</script>
+{% endblock %}

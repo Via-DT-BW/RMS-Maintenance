@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RMS</title>
+    <link rel="icon" type="image/ico" href="static/content/icon.webp">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-color: #f4f6f8;
+        }
+
+        .video-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            overflow: hidden;
+        }
+
+        .video-bg video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(60%);
+        }
+
+        .content-wrapper, .navbar, .footer {
+            position: relative;
+            z-index: 2;
+        }
+
+        .navbar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 10;
+            padding: 10px 0;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            padding-left: 0;
+        }
+
+        .navbar-brand img {
+            height: 40px;
+            align-self: center;
+            margin-right: 5px;
+        }
+
+        .nav-link {
+            color: #fff !important;
+            transition: color 0.3s ease;
+            position: relative;
+            padding: 10px 15px;
+            font-size: 1.1rem;
+        }
+
+        .nav-link:hover {
+            color: #2EFAD9 !important;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #2EFAD9;
+            transform: scaleX(0);
+            transform-origin: bottom right;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-link:hover::after {
+            transform: scaleX(1);
+            transform-origin: bottom left;
+        }
+
+        .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3E%3Cpath stroke='white' stroke-width='2' d='M5 7h20M5 15h20M5 23h20'/%3E%3C/svg%3E");
+        }
+
+        .content-wrapper {
+            min-height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .title {
+            position: relative;
+            z-index: 2;
+            color: white;
+            text-align: center;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 3rem;
+        }
+
+        .title-small {
+            position: relative;
+            z-index: 2;
+            color: white;
+            text-align: center;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.2rem;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: transparent;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            z-index: 3;
+        }
+
+        .modal-content {
+            padding: 1rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .modal-header {
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-weight: bold;
+            color: #051729;
+            font-size: 1.5rem;
+        }
+
+        .form-control, .form-select {
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            font-size: 1rem;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+            background-color: white;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #2EFAD9;
+            box-shadow: 0 0 0 0.25rem rgba(46, 250, 217, 0.25);
+        }
+
+        .btn-login {
+            background-color: #051729;
+            color: white;
+            border-radius: 10px;
+            padding: 1rem;
+            width: 100%;
+            border: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-login:hover {
+            background-color: #2efad9;
+            transform: translateY(-2px);
+        }
+
+        .layer-btn {
+            background-color: #0D9E71;
+            color: white;
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            width: 100%;
+            border: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .layer-btn:hover {
+            background-color: #2efad9;
+            transform: translateY(-3px);
+        }
+
+        .btn-register {
+            background: linear-gradient(135deg, #18DD75 0%, #0D9E71 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px #0E8187;
+        }
+
+        .btn-register:hover {
+            background: linear-gradient(135deg, #106ebe 0%, #005a9e 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 120, 212, 0.4);
+            color: white;
+        }
+
+        .btn-register:active {
+            transform: translateY(0);
+        }
+
+        .btn-register:focus {
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.2);
+            outline: none;
+        }
+
+        .btn-register:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-windows-login {
+            background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 120, 212, 0.3);
+        }
+
+        .btn-windows-login:hover {
+            background: linear-gradient(135deg, #106ebe 0%, #005a9e 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 120, 212, 0.4);
+            color: white;
+        }
+
+        .btn-windows-login:active {
+            transform: translateY(0);
+        }
+
+        .btn-windows-login:focus {
+            box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.2);
+            outline: none;
+        }
+
+        .btn-windows-login:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            font-size: 1rem;
+        }
+
+        .register-alert {
+            background-color: #e8f5e9;
+            border-left: 4px solid #388e3c;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .register-alert i {
+            font-size: 1.5rem;
+            color: #388e3c;
+            margin-right: 10px;
+        }
+
+        .register-alert a {
+            color: #2e7d32;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .register-alert a:hover {
+            color: #1b5e20;
+            text-decoration: underline;
+        }
+
+        .login-separator {
+            position: relative;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .login-separator::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e0e0e0;
+            z-index: 1;
+        }
+
+        .login-separator span {
+            background: white;
+            padding: 0 15px;
+            color: #666;
+            font-size: 14px;
+            position: relative;
+            z-index: 2;
+        }
+
+        @media (max-width: 768px) {
+            .footer {
+                font-size: 11px;
+            }
+
+            .navbar-brand img {
+                height: 40px;
+                margin-right: 5px;
+            }
+
+            .title, .title-small {
+                top: 30px;
+            }
+
+            .navbar-nav {
+                text-align: center;
+            }
+
+            .nav-item {
+                padding: 0 10px;
+            }
+
+            .title {
+                font-size: 2rem;
+            }
+
+            .title-small {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .title {
+                font-size: 2rem;
+            }
+
+            .title-small {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background video -->
+    <div class="video-bg">
+        <video id="bg-video" autoplay loop muted playsinline>
+            <source src="static/content/background_video.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <img src="static/content/tickets.png" alt="RMS Icon">
+                <span class="text-white ms-2">RMS</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav ms-auto mt-2">
+                    <li class="nav-item"><a class="nav-link" href="#" id="loginLink" data-bs-toggle="modal" data-bs-target="#modalLogin">Enter</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" id="registerLink" data-bs-toggle="modal" data-bs-target="#modalRegister">Register</a></li>
+                    <li class="nav-item"><a class="nav-link" href="static/content/Manual RMS.pdf" target="_blank" id="manualLink">Manual</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="content-wrapper">
+        <h1 class="title">RMS</h1>
+        <p class="title-small">Requests Management System Borgwarner TTT Viana</p>
+    </div>
+
+    <footer class="footer">
+        Copyright © <span id="current-year"></span> Digital Transformation - Viana do Castelo
+    </footer>
+
+    <!-- Modal Login -->
+    <div class="modal fade" id="modalLogin" tabindex="-1" role="dialog" aria-labelledby="modalLoginLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalLoginLabel">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Escolha inicial -->
+                    <div id="loginChoice">
+                        <div class="list-group">
+                            <a href="/windows_login" class="list-group-item list-group-item-action py-3">
+                                <div class="d-flex w-100 align-items-center">
+                                    <i class="fab fa-windows fa-lg me-3 text-primary"></i>
+                                    <div>
+                                        <h6 class="mb-1">Login with Single Sign-On</h6>
+                                        <small class="text-muted">Available for registered users with a BorgWarner email address.</small>
+                                    </div>
+                                    <i class="fas fa-chevron-right ms-auto text-muted"></i>
+                                </div>
+                            </a>
+                            <button class="list-group-item list-group-item-action py-3" id="manualLoginBtn">
+                                <div class="d-flex w-100 align-items-center">
+                                    <i class="fas fa-key fa-lg me-3 text-secondary"></i>
+                                    <div>
+                                        <h6 class="mb-1">Login with Username e Password</h6>
+                                        <small class="text-muted">Available for registered users with account credentials.</small>
+                                    </div>
+                                    <i class="fas fa-chevron-right ms-auto text-muted"></i>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Login Manual -->
+                    <div id="manualLoginForm" style="display:none;">
+                        <form id="loginForm" action="/login" method="POST">
+                            <div class="form-group mb-3">
+                                <label for="username" style="color:#051729; font-weight:500;">
+                                    <i class="fas fa-user me-2"></i>Username
+                                </label>
+                                <input type="text" class="form-control" id="username" name="username" placeholder="Insira o seu username" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="password" style="color:#051729; font-weight:500;">
+                                    <i class="fas fa-lock me-2"></i>Password
+                                </label>
+                                <input type="password" class="form-control" id="password" name="password" placeholder="Insira a sua password" required>
+                            </div>
+                            <div class="form-group mb-3">
+                                <button type="submit" class="btn btn-login w-100">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Entrar
+                                </button>
+                            </div>
+                            <div class="text-center mt-3">
+                                <a href="#" class="text-muted" data-bs-toggle="modal" data-bs-target="#modalForgotPassword">
+                                    <i class="fas fa-question-circle me-1"></i>Esqueceu-se da sua password?
+                                </a>
+                            </div>
+                            <div class="text-center mt-3">
+                                <button type="button" class="btn btn-link" id="backToChoice">
+                                    <i class="fas fa-arrow-left me-1"></i>Voltar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register Modal -->
+    <div class="modal fade" id="modalRegister" tabindex="-1" role="dialog" aria-labelledby="modalRegisterLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalRegisterLabel">
+                        <i class="fas fa-user-plus me-2"></i>Register
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="registerForm" action="/register" method="POST">
+                        <div class="form-group mb-3">
+                            <label for="name" style="color:#051729; font-weight:500;">
+                                <i class="fas fa-id-card me-2"></i>Name
+                            </label>
+                            <input type="text" class="form-control" id="name" name="name" placeholder="Insert your first and last name" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="nr_colaborador" style="color:#051729; font-weight:500;">
+                                <i class="fas fa-id-badge me-2"></i>Work Number
+                            </label>
+                            <input type="text" class="form-control" id="nr_colaborador" name="nr_colaborador" placeholder="Work Number" maxlength="6">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="email" style="color:#051729; font-weight:500;">
+                                <i class="fas fa-envelope me-2"></i>Email
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="exemplo@email.com" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="username" style="color:#051729; font-weight:500;">
+                                <i class="fas fa-user-circle me-2"></i>Username
+                            </label>
+                            <input type="text" class="form-control" id="username" name="username" placeholder="Insert your username" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="password1" style="color:#051729; font-weight:500;">
+                                <i class="fas fa-lock me-2"></i>Password
+                            </label>
+                            <input type="password" class="form-control" id="password1" name="password1" placeholder="Insert your password" minlength="8" title="A senha deve ter pelo menos 8 caracteres" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="password2" style="color:#051729; font-weight:500;">
+                                <i class="fas fa-lock me-2"></i>Confirm Password
+                            </label>
+                            <input type="password" class="form-control" id="password2" name="password2" placeholder="Confirm your password" required>
+                        </div>
+                        <div class="alert alert-danger d-none" id="register-error">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <span id="register-error-message"></span>
+                        </div>
+                        <div class="form-group mb-3">
+                            <button type="submit" class="btn btn-login w-100">
+                                <i class="fas fa-user-check me-2"></i>Register
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div class="modal" id="modalForgotPassword" tabindex="-1" role="dialog" aria-labelledby="modalForgotPasswordLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalForgotPasswordLabel">
+                        <i class="fas fa-lock me-2"></i>Recuperar Password
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="forgotPasswordForm">
+                        <div class="form-group mb-3">
+                            <label for="forgot_email" style="color:#051729; font-weight:500;">
+                                <i class="fas fa-envelope me-2"></i>Email
+                            </label>
+                            <input type="email" class="form-control" id="forgot_email" name="email" placeholder="Insira o seu email" required>
+                        </div>
+                        <div class="alert alert-danger d-none" id="forgot-password-error">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <span id="forgot-password-error-message"></span>
+                        </div>
+                        <div class="form-group mb-3">
+                            <button type="submit" class="btn btn-login w-100">
+                                <i class="fas fa-paper-plane me-2"></i>Enviar Link de Recuperação
+                            </button>
+                        </div>
+                        <div class="text-center mt-3">
+                            <button class="btn btn-link" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalLogin" id="backToLoginFromForgot">
+                                <i class="fas fa-arrow-left me-1"></i>Voltar ao Login
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages (Toastr replaced by SweetAlert2 Toastr style) -->
+    {% with messages = get_flashed_messages(with_categories=true, category_filter=["error","info","success","warning"]) %}
+    {% if messages %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function notify(type, msg) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: type,
+                title: msg,
+                showConfirmButton: false,
+                timer: 3500,
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'swal2-toastr-popup'
+                },
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                }
+            });
+        }
+
+        if (!document.getElementById('swal2-toastr-style')) {
+            const style = document.createElement('style');
+            style.id = 'swal2-toastr-style';
+            style.innerHTML = `
+            .swal2-toastr-popup {
+                min-width: 320px !important;
+                max-width: 400px !important;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.15) !important;
+                border-radius: 6px !important;
+                padding: 0.75rem 1.25rem !important;
+                font-size: 1rem !important;
+            }
+            .swal2-toast .swal2-title {
+                margin: 0 !important;
+                font-size: 1rem !important;
+                font-weight: 500 !important;
+            }
+            `;
+            document.head.appendChild(style);
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            {% for category, message in messages %}
+                notify("{{ category }}", "{{ message }}");
+            {% endfor %}
+        });
+    </script>
+    {% endif %}
+    {% endwith %}
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Setup video background
+            const video = document.getElementById('bg-video');
+            if (video) {
+                video.load();
+                video.play().catch(error => {
+                    console.log('Video autoplay failed:', error);
+                });
+                video.addEventListener('ended', () => {
+                    video.currentTime = 0;
+                    video.play();
+                });
+            }
+
+            // Modal navigation
+            const registerLink = document.getElementById('registerLink');
+            if (registerLink) {
+                registerLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const loginModalEl = document.getElementById('modalLogin');
+                    if (loginModalEl) {
+                        const loginModal = bootstrap.Modal.getInstance(loginModalEl);
+                        if (loginModal) loginModal.hide();
+                    }
+                    setTimeout(function() {
+                        const registerModalEl = document.getElementById('modalRegister');
+                        if (registerModalEl) {
+                            const registerModal = new bootstrap.Modal(registerModalEl);
+                            registerModal.show();
+                        }
+                    }, 300);
+                });
+            }
+
+            const loginLink = document.getElementById('loginLink');
+            if (loginLink) {
+                loginLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const loginModalEl = document.getElementById('modalLogin');
+                    if (loginModalEl) {
+                        const loginModal = new bootstrap.Modal(loginModalEl);
+                        loginModal.show();
+                    }
+                });
+            }
+
+            // Show manual login
+            const manualLoginBtn = document.getElementById('manualLoginBtn');
+            if (manualLoginBtn) {
+                manualLoginBtn.addEventListener('click', function() {
+                    document.getElementById('loginChoice').style.display = 'none';
+                    document.getElementById('manualLoginForm').style.display = 'block';
+                });
+            }
+
+            // Show register
+            const registerBtn = document.getElementById('registerBtn');
+            if (registerBtn) {
+                registerBtn.addEventListener('click', function() {
+                    document.getElementById('loginChoice').style.display = 'none';
+                    const loginModal = bootstrap.Modal.getInstance(document.getElementById('modalLogin'));
+                    if (loginModal) loginModal.hide();
+                    setTimeout(() => {
+                        const registerModal = new bootstrap.Modal(document.getElementById('modalRegister'));
+                        if (registerModal) registerModal.show();
+                    }, 300);
+                });
+            }
+
+            // Back from manual login
+            const backToChoice = document.getElementById('backToChoice');
+            if (backToChoice) {
+                backToChoice.addEventListener('click', function() {
+                    document.getElementById('manualLoginForm').style.display = 'none';
+                    document.getElementById('loginChoice').style.display = 'block';
+                });
+            }
+
+            // Back from register
+            const backToChoiceFromRegister = document.getElementById('backToChoiceFromRegister');
+            if (backToChoiceFromRegister) {
+                backToChoiceFromRegister.addEventListener('click', function() {
+                    const registerModal = bootstrap.Modal.getInstance(document.getElementById('modalRegister'));
+                    if (registerModal) registerModal.hide();
+                    setTimeout(() => {
+                        const loginModal = new bootstrap.Modal(document.getElementById('modalLogin'));
+                        if (loginModal) loginModal.show();
+                        document.getElementById('registerForm').style.display = 'none';
+                        document.getElementById('loginChoice').style.display = 'block';
+                    }, 300);
+                });
+            }
+
+            // Back from forgot password
+            const backToLoginFromForgot = document.getElementById('backToLoginFromForgot');
+            if (backToLoginFromForgot) {
+                backToLoginFromForgot.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const forgotModal = bootstrap.Modal.getInstance(document.getElementById('modalForgotPassword'));
+                    if (forgotModal) forgotModal.hide();
+                    setTimeout(() => {
+                        const loginModal = new bootstrap.Modal(document.getElementById('modalLogin'));
+                        if (loginModal) loginModal.show();
+                    }, 300);
+                });
+            }
+
+            // Update current year
+            document.getElementById("current-year").textContent = new Date().getFullYear();
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

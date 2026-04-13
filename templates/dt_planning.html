@@ -1,0 +1,715 @@
+{% extends "home.html" %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs" id="planningTabs" role="tablist">
+        <li class="nav-item mt-4" role="presentation">
+            <button class="nav-link active" id="automation-tab" data-bs-toggle="tab" data-bs-target="#automation" type="button" role="tab">Automation</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link mt-4" id="software-tab" data-bs-toggle="tab" data-bs-target="#software" type="button" role="tab">Software</button>
+        </li>
+    </ul>
+
+    <div class="tab-content mt-3">
+        <!-- Automation -->
+        <div class="tab-pane fade show active" id="automation" role="tabpanel">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Automation Support Calendar</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="row align-items-end">
+                            <div class="col-md-6">
+                                <select id="monthSelect" class="form-select">
+                                    <option value="1">January</option>
+                                    <option value="2">February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                            </div>
+                            <div class="col text-end">
+                                <button id="drawSupportButton" class="btn btn-success btnac-lg mb-3">
+                                    <i class="fas fa-dice me-2"></i>Draw Support
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Weekly Support List -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="mb-3"><i class="fas fa-list me-2"></i>Weekly Support Schedule</h6>
+                            <div id="weeklySupport" class="border rounded p-3" style="max-height: 500px; overflow-y: auto;">
+                                <!-- Weeks will be rendered here dynamically -->
+                            </div>
+
+                            <!-- Edit Responsible Modal -->
+                            <div class="modal fade" id="editResponsibleModal" tabindex="-1" aria-labelledby="editResponsibleModalLabel" aria-hidden="true">
+                              <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                  <form id="editResponsibleForm">
+                                    <div class="modal-header">
+                                      <h5 class="modal-title" id="editResponsibleModalLabel">Edit Week Responsible</h5>
+                                      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                      <input type="hidden" id="editSupportId">
+                                      <div class="mb-3">
+                                        <label for="editResponsibleSelect" class="form-label">Responsible</label>
+                                        <select id="editResponsibleSelect" class="form-select" required>
+                                          <!-- Options filled by JS -->
+                                        </select>
+                                      </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                      <button type="submit" class="btn btn-primary">Save</button>
+                                    </div>
+                                  </form>
+                                </div>
+                              </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Software -->
+        <div class="tab-pane fade" id="software" role="tabpanel">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-code me-2"></i>Application Responsibles</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Add application form -->
+                    <form id="addApplicationForm" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label for="applicationName" class="form-label">Application Name</label>
+                                <input type="text" id="applicationName" class="form-control" placeholder="Ex: 5S" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="applicationResponsible" class="form-label">Responsible</label>
+                                <select id="applicationResponsible" class="form-select" required>
+                                    <option value="">Select a responsible</option>
+                                    <!-- Options filled by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="applicationNotes" class="form-label">Notes (optional)</label>
+                                <input type="text" id="applicationNotes" class="form-control" placeholder="Notes">
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button type="submit" class="new-ticket-btn w-100 mb-3">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="list-section">
+                        <ul id="applicationsList" class="list-group mt-2">
+                            {% for app in software %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center app-item" data-id="{{ app.id }}">
+                                <div class="d-flex align-items-center">
+                                    <div class="project-avatar me-3" data-project-name="{{ app.application_name }}">
+                                        <img src="" alt="{{ app.application_name }}" class="project-image">
+                                    </div>
+                                    <div>
+                                        <strong>{{ app.application_name }}</strong>
+                                        <div class="responsible-container d-flex align-items-center mt-1">
+                                            <div class="responsible-avatar me-1" data-responsible="{{ app.responsible }}"></div>
+                                            <span class="responsible-text small">{{ app.responsible }}</span>
+                                        </div>
+                                        {% if app.notes %}
+                                            <div class="text-muted small mt-1">{{ app.notes }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <button class="action-btn delete-btn" title="Remove" onclick="removeApplication({{ app.id }})">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    background: #fff;
+    transition: background 0.2s;
+}
+.list-group-item:last-child {
+    border-bottom: none;
+}
+.app-item:hover {
+    background: #f3f4f6;
+}
+.project-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.project-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 6px;
+}
+.project-avatar.loading {
+    background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+}
+.project-avatar.error {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+.responsible-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 12px;
+    color: white;
+    margin-right: 4px;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    font-size: 18px;
+    margin-right: 2px;
+    background: #f3f4f6;
+    color: #374151;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+}
+.action-btn:last-child { margin-right: 0; }
+.action-btn:hover {
+    transform: translateY(-2px) scale(1.08);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    background: #e0e7ef;
+    color: #2563eb;
+}
+.delete-btn {
+    background-color: #ef4444;
+    color: white;
+}
+.delete-btn:hover {
+    background-color: #dc2626;
+    color: white;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+const projectImages = {};
+const userColors = {};
+let softwareUsers = [];
+let automationData = [];
+
+document.addEventListener('DOMContentLoaded', function () {
+    let automationData = [];
+    let softwareUsers = [];
+
+    // Initialize current month
+    function initializeMonthSelect() {
+        const monthSelect = document.getElementById('monthSelect');
+        const currentMonth = new Date().getMonth() + 1;
+        monthSelect.value = currentMonth;
+    }
+
+    // Load software users
+    function loadSoftwareUsers() {
+        fetch('/get_software_users')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    softwareUsers = data.users;
+                    populateResponsibleSelect();
+                }
+            })
+            .catch(error => console.error('Error loading users:', error));
+    }
+
+    // Fill responsible select
+    function populateResponsibleSelect() {
+        const select = document.getElementById('applicationResponsible');
+        select.innerHTML = '<option value="">Select a responsible</option>';
+        softwareUsers.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.username;
+            option.textContent = user.username;
+            select.appendChild(option);
+        });
+    }
+
+    // Load automation planning data
+    function loadAutomationData() {
+        const month = document.getElementById('monthSelect').value;
+        const year = new Date().getFullYear(); // Always current year
+        fetch(`/get_automation_planning?month=${month}&year=${year}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    automationData = data.planning;
+                    renderWeeklySupport();
+                }
+            })
+            .catch(error => console.error('Error loading data:', error));
+    }
+
+    // Render weekly support list
+    function renderWeeklySupport() {
+        const container = document.getElementById('weeklySupport');
+        if (automationData.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No support scheduled for this period.</p>
+                </div>
+            `;
+            return;
+        }
+        let html = '';
+        automationData.forEach((support) => {
+            const weekDates = getWeekDates(support.week_number, support.year);
+            const isCurrentWeek = isCurrentWeekCheck(support.week_number, support.year);
+            html += `
+                <div class="card mb-3 ${isCurrentWeek ? 'border-success' : ''}">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-1 d-flex align-items-center justify-content-center">
+                                <div class="responsible-avatar" data-responsible="${support.responsible}"></div>
+                            </div>
+                            <div class="col-md-2">
+                                <h6 class="mb-0">
+                                    ${isCurrentWeek ? '<i class="fas fa-star text-warning me-2"></i>' : ''}
+                                    Week ${support.week_number}/${support.year}
+                                </h6>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="badge bg-primary fs-6">${support.responsible}</span>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    ${weekDates.start} - ${weekDates.end}
+                                </small>
+                                ${support.notes ? `<br><small class="text-info"><i class="fas fa-info-circle me-1"></i>${support.notes}</small>` : ''}
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <button class="btn btn-sm btn-outline-primary me-2" onclick="openEditResponsibleModal(${support.id}, '${support.responsible}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="removeAutomationSupport(${support.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+        initializeResponsibleAvatars();
+    }
+
+    // Check if it's the current week
+    function isCurrentWeekCheck(weekNumber, year) {
+        const now = new Date();
+        const currentWeek = getWeekNumber(now);
+        const currentYear = now.getFullYear();
+        return weekNumber === currentWeek && year === currentYear;
+    }
+
+    // Get week number
+    function getWeekNumber(date) {
+        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+        return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+    }
+
+    // Get week start and end dates (Monday to Friday)
+    function getWeekDates(weekNumber, year) {
+        const jan1 = new Date(year, 0, 1);
+        const days = (weekNumber - 1) * 7;
+        const startOfWeek = new Date(jan1.getTime() + days * 24 * 60 * 60 * 1000);
+        // Adjust to Monday
+        const dayOfWeek = startOfWeek.getDay();
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        startOfWeek.setDate(startOfWeek.getDate() + mondayOffset);
+
+        // Monday (start)
+        const monday = new Date(startOfWeek);
+        // Friday (end)
+        const friday = new Date(startOfWeek);
+        friday.setDate(monday.getDate() + 4);
+
+        return {
+            start: monday.toLocaleDateString('en-GB'),
+            end: friday.toLocaleDateString('en-GB')
+        };
+    }
+
+    // Draw support button
+    const drawSupportButton = document.getElementById('drawSupportButton');
+    drawSupportButton.addEventListener('click', function () {
+        const month = document.getElementById('monthSelect').value;
+        const year = new Date().getFullYear(); // Always current year
+
+        // SweetAlert with animation
+        Swal.fire({
+            title: 'Drawing responsibles...',
+            html: `
+                <div style="display:flex;flex-direction:column;align-items:center;">
+                    <div class="dice-rolling" style="margin-bottom:12px;">
+                        <svg width="48" height="48" viewBox="0 0 48 48">
+                            <g>
+                                <rect x="4" y="4" width="40" height="40" rx="10" fill="#22c55e" opacity="0.2">
+                                    <animate attributeName="opacity" values="0.2;1;0.2" dur="1.2s" repeatCount="indefinite"/>
+                                </rect>
+                                <circle cx="24" cy="24" r="4" fill="#22c55e">
+                                    <animate attributeName="r" values="4;8;4" dur="1.2s" repeatCount="indefinite"/>
+                                </circle>
+                            </g>
+                        </svg>
+                    </div>
+                    <span style="font-size:1.1em;">Please wait...</span>
+                </div>
+            `,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        fetch('/draw_automation_support', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ month: month, year: year })
+        })
+            .then(response => response.json())
+            .then(data => {
+                Swal.close();
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: data.message, toast: true, timer: 2500, showConfirmButton: false, position: 'top-end' });
+                    loadAutomationData();
+                } else {
+                    Swal.fire({ icon: 'warning', title: data.message, toast: true, timer: 2500, showConfirmButton: false, position: 'top-end' });
+                }
+            })
+            .catch(error => {
+                Swal.close();
+                console.error('Error drawing support:', error);
+                Swal.fire({ icon: 'error', title: 'Error drawing support', toast: true, timer: 2500, showConfirmButton: false, position: 'top-end' });
+            });
+    });
+
+    // Add application
+    const addApplicationForm = document.getElementById('addApplicationForm');
+    addApplicationForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const applicationName = document.getElementById('applicationName').value;
+        const responsible = document.getElementById('applicationResponsible').value;
+        const notes = document.getElementById('applicationNotes').value;
+        fetch('/add_software_application', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                application_name: applicationName,
+                responsible: responsible,
+                notes: notes
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Create new list item
+                const ul = document.getElementById('applicationsList');
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center app-item';
+                li.setAttribute('data-id', data.id);
+                li.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <div class="project-avatar me-3" data-project-name="${applicationName}">
+                            <img src="" alt="${applicationName}" class="project-image">
+                        </div>
+                        <div>
+                            <strong>${applicationName}</strong>
+                            <div class="responsible-container d-flex align-items-center mt-1">
+                                <div class="responsible-avatar me-1" data-responsible="${responsible}"></div>
+                                <span class="responsible-text small">${responsible}</span>
+                            </div>
+                            ${notes ? `<div class="text-muted small mt-1">${notes}</div>` : ''}
+                        </div>
+                    </div>
+                    <button class="action-btn delete-btn" title="Remove" onclick="removeApplication(${data.id})">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                `;
+                ul.appendChild(li);
+
+                addApplicationForm.reset();
+                Swal.fire({ icon: 'success', title: 'Application added successfully!', toast: true, timer: 2000, showConfirmButton: false, position: 'top-end' });
+                initializeProjectAvatars();
+                initializeResponsibleAvatars();
+            } else {
+                Swal.fire({ icon: 'warning', title: data.message, toast: true, timer: 2500, showConfirmButton: false, position: 'top-end' });
+            }
+        })
+        .catch(error => {
+            console.error('Error adding application:', error);
+            Swal.fire({ icon: 'error', title: 'Error adding application', toast: true, timer: 2500, showConfirmButton: false, position: 'top-end' });
+        });
+    });
+
+    // Remove application
+    window.removeApplication = function(id) {
+        Swal.fire({
+            title: 'Are you sure you want to remove this application?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Remove',
+            cancelButtonText: 'Cancel',
+            toast: true,
+            position: 'top-end'
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            fetch(`/remove_software_application/${id}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(function(data) {
+                    if (data.success) {
+                        const row = document.querySelector(`[data-id="${id}"]`);
+                        if (row) row.remove();
+                        Swal.fire({ icon: 'success', title: 'Application removed successfully!', toast: true, timer: 2000, showConfirmButton: false, position: 'top-end' });
+                    } else {
+                        Swal.fire({ icon: 'warning', title: data.message, toast: true, timer: 2500, showConfirmButton: false, position: 'top-end' });
+                    }
+                })
+                .catch(error => {
+                    Swal.fire({ icon: 'error', title: 'Error removing application', text: error.message, toast: true, timer: 2500, showConfirmButton: false, position: 'top-end' });
+                });
+        });
+    };
+
+    // Remove automation support
+    window.removeAutomationSupport = function(id) {
+        Swal.fire({
+            title: 'Are you sure you want to remove this support?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Remove',
+            cancelButtonText: 'Cancel',
+            toast: true,
+            position: 'top-end'
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            fetch(`/remove_automation_support/${id}`, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        loadAutomationData();
+                        Swal.fire({ icon: 'success', title: 'Support removed successfully!', toast: true, timer: 2000, showConfirmButton: false, position: 'top-end' });
+                    } else {
+                        Swal.fire({ icon: 'warning', title: data.message, toast: true, timer: 2500, showConfirmButton: false, position: 'top-end' });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error removing support:', error);
+                    Swal.fire({ icon: 'error', title: 'Error removing support', toast: true, timer: 2500, showConfirmButton: false, position: 'top-end' });
+                });
+        });
+    };
+
+    // Edit responsible modal
+    window.openEditResponsibleModal = function(id, currentResponsible) {
+        document.getElementById('editSupportId').value = id;
+        const select = document.getElementById('editResponsibleSelect');
+        select.innerHTML = '';
+        // Load only users from 'Automation' category
+        fetch('/get_automation_users')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    data.users.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.username;
+                        option.textContent = user.username;
+                        if (user.username === currentResponsible) option.selected = true;
+                        select.appendChild(option);
+                    });
+                    const modal = new bootstrap.Modal(document.getElementById('editResponsibleModal'));
+                    modal.show();
+                }
+            });
+    };
+
+    document.getElementById('editResponsibleForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const id = document.getElementById('editSupportId').value;
+        const responsible = document.getElementById('editResponsibleSelect').value;
+        fetch('/update_automation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, responsible: responsible })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Responsible updated!', toast: true, timer: 1500, showConfirmButton: false, position: 'top-end' });
+                loadAutomationData();
+                bootstrap.Modal.getInstance(document.getElementById('editResponsibleModal')).hide();
+            } else {
+                Swal.fire({ icon: 'error', title: data.message, toast: true, timer: 2500, showConfirmButton: false, position: 'top-end' });
+            }
+        })
+        .catch(error => {
+            Swal.fire({ icon: 'error', title: 'Error updating responsible', toast: true, timer: 2500, showConfirmButton: false, position: 'top-end' });
+        });
+    });
+
+    // Month change event
+    document.getElementById('monthSelect').addEventListener('change', loadAutomationData);
+
+    // DiceBear for project-avatar
+    function initializeProjectAvatars() {
+        const avatars = document.querySelectorAll('.project-avatar');
+        avatars.forEach(avatar => {
+            const projectName = avatar.dataset.projectName;
+            generateProjectImage(avatar, projectName);
+        });
+    }
+    function generateProjectImage(avatarElement, projectName) {
+        if (projectImages[projectName]) {
+            const img = avatarElement.querySelector('.project-image');
+            img.src = projectImages[projectName];
+            return;
+        }
+        avatarElement.classList.add('loading');
+        const imageUrl = `https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(projectName)}&backgroundColor=ECE9E6,FFFFFF&radius=6`;
+        const img = avatarElement.querySelector('.project-image');
+        img.onload = function() {
+            avatarElement.classList.remove('loading');
+            projectImages[projectName] = imageUrl;
+        };
+        img.onerror = function() {
+            avatarElement.classList.remove('loading');
+            avatarElement.classList.add('error');
+            avatarElement.innerHTML = '<div style="width:100%;height:100%;background:linear-gradient(135deg,#feca57,#ff9ff3);display:flex;align-items:center;justify-content:center;"><span style="color:#fff;font-size:18px;">?</span></div>';
+            projectImages[projectName] = 'gradient-fallback';
+        };
+        img.src = imageUrl;
+    }
+
+    // Responsible avatars (colors)
+    function initializeResponsibleAvatars() {
+        const avatars = document.querySelectorAll('.responsible-avatar');
+        avatars.forEach(avatar => {
+            const responsible = avatar.dataset.responsible;
+            generateResponsibleAvatar(avatar, responsible);
+        });
+    }
+    function generateResponsibleAvatar(avatarElement, responsible) {
+        if (!responsible || responsible === 'Unassigned') {
+            avatarElement.style.backgroundColor = '#9ca3af';
+            avatarElement.textContent = '?';
+            return;
+        }
+        const avatarColor = getAvatarColor(responsible);
+        avatarElement.style.backgroundColor = avatarColor;
+        avatarElement.textContent = responsible.charAt(0).toUpperCase();
+    }
+    function getAvatarColor(name) {
+        if (!name || name === 'Unassigned') return '#9ca3af';
+        if (userColors[name]) return userColors[name];
+        const colors = [
+            '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
+            '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
+            '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef',
+            '#ec4899', '#f43f5e', '#dc2626', '#ea580c', '#d97706',
+            '#65a30d', '#059669', '#0d9488', '#0891b2', '#2563eb',
+            '#4f46e5', '#7c3aed', '#c026d3', '#db2777', '#e11d48'
+        ];
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            const char = name.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        const colorIndex = Math.abs(hash) % colors.length;
+        const selectedColor = colors[colorIndex];
+        userColors[name] = selectedColor;
+        return selectedColor;
+    }
+
+    // Initialize
+    initializeMonthSelect();
+    loadSoftwareUsers();
+    loadAutomationData();
+    initializeProjectAvatars();
+    initializeResponsibleAvatars();
+
+    document.getElementById('softwareTableBody').addEventListener('click', function(e) {
+        const header = e.target.closest('.group-header');
+        if (header) {
+            const groupIndex = header.getAttribute('data-group');
+            const groupBody = document.getElementById('group-' + groupIndex);
+            const chevron = header.querySelector('.group-chevron');
+            if (groupBody.classList.contains('show')) {
+                groupBody.classList.remove('show');
+                chevron.style.transform = 'rotate(-90deg)';
+            } else {
+                groupBody.classList.add('show');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

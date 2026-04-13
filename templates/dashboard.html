@@ -1,0 +1,378 @@
+{% extends 'home.html' %}
+{% block content %}
+
+
+<head>
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <link href="static/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link
+        href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+        rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="static/css/sb-admin-2.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this page -->
+    <link href="static/vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
+    <link href="static/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+</head>
+
+<body class="sb-nav-fixed">
+    <div class="container.fluid m-2">
+
+    </div>
+
+    <div class="card shadow mb-4 m-3">
+        <div class="card-header py-3">
+            <h5>Gráficos de Intervenções</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Gráfico Nº de intervenções por linha (Melhoria) -->
+                <div class="col-md-6">
+                    <div id="intervencoes_por_linha_melhoria" style="width: 100%; height: 400px;"></div>
+                </div>
+                <!-- Gráfico Tempo por linha (Melhoria) -->
+                <div class="col-md-6">
+                    <div id="tempo_por_linha_melhoria" style="width: 100%; height: 400px;"></div>
+                </div>
+            </div>
+    
+            <div class="row" style="margin-top: 50px;">
+                <!-- Gráfico Nº de intervenções por linha (Corretiva) -->
+                <div class="col-md-6">
+                    <div id="intervencoes_por_linha_corretiva" style="width: 100%; height: 400px;"></div>
+                </div>
+                <!-- Gráfico Tempo por linha (Corretiva) -->
+                <div class="col-md-6">
+                    <div id="tempo_por_linha_corretiva" style="width: 100%; height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+    
+
+
+ 
+  
+    <!-- Load jQuery first -->
+<script src="static/vendor/jquery/jquery.min.js"></script>
+
+<!-- Load Bootstrap JS (for styling and responsive features) -->
+<script src="static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+<!-- Core plugin JavaScript (for easing and animations) -->
+<script src="static/vendor/jquery-easing/jquery.easing.min.js"></script>
+
+<!-- Custom scripts for all pages (like sidebar toggling) -->
+<script src="static/js/sb-admin-2.min.js"></script>
+
+<!-- Load DataTables JS after jQuery is loaded -->
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Gráfico Linhas vs Tipo de Intervenção
+        Highcharts.chart('intervencoes_por_linha_melhoria', {
+            chart: {
+                zoomType: 'xy'  // Para permitir dois eixos Y
+            },
+            title: {
+                text: 'Nº de Intervenções por Linha (Melhoria)'
+            },
+            xAxis: {
+                categories: ['Linha 1', 'Linha 2', 'Linha 3', 'Linha 4'],  // Estas serão reordenadas de acordo com os dados
+                crosshair: true
+            },
+            yAxis: [{
+                title: {
+                    text: 'Total de Intervenções'
+                }
+            }, {
+                title: {
+                    text: 'Percentagem Acumulada'
+                },
+                min: 0,
+                max: 100,
+                opposite: true
+            }],
+            tooltip: {
+                shared: true
+            },
+            series: [{
+                name: 'Intervenções',
+                type: 'column',
+                data: (function () {
+                    var categories = ['Linha 1', 'Linha 2', 'Linha 3', 'Linha 4'];
+                    var data = [10, 5, 15, 7];
+
+                    // Ordena os dados do maior para o menor e reordena as categorias
+                    var sortedData = data.map((value, index) => [categories[index], value])
+                                        .sort((a, b) => b[1] - a[1]); // Ordena os dados
+
+                    // Atualiza as categorias para refletir a nova ordem
+                    var sortedCategories = sortedData.map(item => item[0]);
+                    // Não vamos usar Highcharts.charts[0] aqui porque isso pode causar problemas se o gráfico não estiver presente
+
+                    // Retorna os valores ordenados
+                    return sortedData.map(item => item[1]);
+                })(),
+                tooltip: {
+                    valueSuffix: ' intervenções'
+                }
+            }, {
+                name: 'Percentagem Acumulada',
+                type: 'spline',
+                data: (function () {
+                    var data = [10, 5, 15, 7];
+
+                    // Ordena os dados do maior para o menor
+                    var sortedData = data.sort((a, b) => b - a);
+
+                    // Calcula a percentagem acumulada
+                    var total = sortedData.reduce((a, b) => a + b, 0);
+                    var cumulative = 0;
+                    return sortedData.map(value => {
+                        cumulative += value;
+                        var final = ((cumulative / total) * 100).toFixed(2);
+                        return parseFloat(final);
+                    });
+                })(),
+                yAxis: 1,
+                tooltip: {
+                    valueSuffix: '%'
+                }
+            }]
+        });
+
+        Highcharts.chart('tempo_por_linha_melhoria', {
+            chart: {
+                zoomType: 'xy'  // Para permitir dois eixos Y
+            },
+            title: {
+                text: 'Tempo por Linha (Melhoria)'
+            },
+            xAxis: {
+                categories: ['Linha 1', 'Linha 2', 'Linha 3', 'Linha 4'],  // Estas serão reordenadas de acordo com os dados
+                crosshair: true
+            },
+            yAxis: [{
+                title: {
+                    text: 'Tempo Total (horas)'
+                }
+            }, {
+                title: {
+                    text: 'Percentagem Acumulada'
+                },
+                min: 0,
+                max: 100,
+                opposite: true
+            }],
+            tooltip: {
+                shared: true
+            },
+            series: [{
+                name: 'Intervenções',
+                type: 'column',
+                data: (function () {
+                    var categories = ['Linha 1', 'Linha 2', 'Linha 3', 'Linha 4'];
+                    var data = [50, 10, 30, 15];
+
+                    // Ordena os dados do maior para o menor e reordena as categorias
+                    var sortedData = data.map((value, index) => [categories[index], value])
+                                        .sort((a, b) => b[1] - a[1]); // Ordena os dados
+
+                    // Atualiza as categorias para refletir a nova ordem
+                    var sortedCategories = sortedData.map(item => item[0]);
+                    // Não vamos usar Highcharts.charts[0] aqui porque isso pode causar problemas se o gráfico não estiver presente
+
+                    // Retorna os valores ordenados
+                    return sortedData.map(item => item[1]);
+                })(),
+                tooltip: {
+                    valueSuffix: ' horas'
+                }
+            }, {
+                name: 'Percentagem Acumulada',
+                type: 'spline',
+                data: (function () {
+                    var data = [10, 5, 15, 7];
+
+                    // Ordena os dados do maior para o menor
+                    var sortedData = data.sort((a, b) => b - a);
+
+                    // Calcula a percentagem acumulada
+                    var total = sortedData.reduce((a, b) => a + b, 0);
+                    var cumulative = 0;
+                    return sortedData.map(value => {
+                        cumulative += value;
+                        var final = ((cumulative / total) * 100).toFixed(2);
+                        return parseFloat(final);
+                    });
+                })(),
+                yAxis: 1,
+                tooltip: {
+                    valueSuffix: '%'
+                }
+            }]
+        });
+        
+        Highcharts.chart('intervencoes_por_linha_corretiva', {
+            chart: {
+                zoomType: 'xy'  // Para permitir dois eixos Y
+            },
+            title: {
+                text: 'Nº de Intervenções por Linha (Corretiva)'
+            },
+            xAxis: {
+                categories: ['Linha 1', 'Linha 2', 'Linha 3', 'Linha 4'],  // Estas serão reordenadas de acordo com os dados
+                crosshair: true
+            },
+            yAxis: [{
+                title: {
+                    text: 'Total de Intervenções'
+                }
+            }, {
+                title: {
+                    text: 'Percentagem Acumulada'
+                },
+                min: 0,
+                max: 100,
+                opposite: true
+            }],
+            tooltip: {
+                shared: true
+            },
+            series: [{
+                name: 'Intervenções',
+                type: 'column',
+                data: (function () {
+                    var categories = ['Linha 1', 'Linha 2', 'Linha 3', 'Linha 4'];
+                    var data = [10, 5, 15, 7];
+
+                    // Ordena os dados do maior para o menor e reordena as categorias
+                    var sortedData = data.map((value, index) => [categories[index], value])
+                                        .sort((a, b) => b[1] - a[1]); // Ordena os dados
+
+                    // Atualiza as categorias para refletir a nova ordem
+                    var sortedCategories = sortedData.map(item => item[0]);
+                    // Não vamos usar Highcharts.charts[0] aqui porque isso pode causar problemas se o gráfico não estiver presente
+
+                    // Retorna os valores ordenados
+                    return sortedData.map(item => item[1]);
+                })(),
+                tooltip: {
+                    valueSuffix: ' intervenções'
+                }
+            }, {
+                name: 'Percentagem Acumulada',
+                type: 'spline',
+                data: (function () {
+                    var data = [10, 5, 15, 7];
+
+                    // Ordena os dados do maior para o menor
+                    var sortedData = data.sort((a, b) => b - a);
+
+                    // Calcula a percentagem acumulada
+                    var total = sortedData.reduce((a, b) => a + b, 0);
+                    var cumulative = 0;
+                    return sortedData.map(value => {
+                        cumulative += value;
+                        var final = ((cumulative / total) * 100).toFixed(2);
+                        return parseFloat(final);
+                    });
+                })(),
+                yAxis: 1,
+                tooltip: {
+                    valueSuffix: '%'
+                }
+            }]
+        });
+
+        Highcharts.chart('tempo_por_linha_corretiva', {
+            chart: {
+                zoomType: 'xy'  // Para permitir dois eixos Y
+            },
+            title: {
+                text: 'Tempo por Linha (Corretiva)'
+            },
+            xAxis: {
+                categories: ['Linha 1', 'Linha 2', 'Linha 3', 'Linha 4'],  // Estas serão reordenadas de acordo com os dados
+                crosshair: true
+            },
+            yAxis: [{
+                title: {
+                    text: 'Tempo Total (horas)'
+                }
+            }, {
+                title: {
+                    text: 'Percentagem Acumulada'
+                },
+                min: 0,
+                max: 100,
+                opposite: true
+            }],
+            tooltip: {
+                shared: true
+            },
+            series: [{
+                name: 'Intervenções',
+                type: 'column',
+                data: (function () {
+                    var categories = ['Linha 1', 'Linha 2', 'Linha 3', 'Linha 4'];
+                    var data = [50, 10, 30, 15];
+
+                    // Ordena os dados do maior para o menor e reordena as categorias
+                    var sortedData = data.map((value, index) => [categories[index], value])
+                                        .sort((a, b) => b[1] - a[1]); // Ordena os dados
+
+                    // Atualiza as categorias para refletir a nova ordem
+                    var sortedCategories = sortedData.map(item => item[0]);
+                    // Não vamos usar Highcharts.charts[0] aqui porque isso pode causar problemas se o gráfico não estiver presente
+
+                    // Retorna os valores ordenados
+                    return sortedData.map(item => item[1]);
+                })(),
+                tooltip: {
+                    valueSuffix: ' horas'
+                }
+            }, {
+                name: 'Percentagem Acumulada',
+                type: 'spline',
+                data: (function () {
+                    var data = [10, 5, 15, 7];
+
+                    // Ordena os dados do maior para o menor
+                    var sortedData = data.sort((a, b) => b - a);
+
+                    // Calcula a percentagem acumulada
+                    var total = sortedData.reduce((a, b) => a + b, 0);
+                    var cumulative = 0;
+                    return sortedData.map(value => {
+                        cumulative += value;
+                        var final = ((cumulative / total) * 100).toFixed(2);
+                        return parseFloat(final);
+                    });
+                })(),
+                yAxis: 1,
+                tooltip: {
+                    valueSuffix: '%'
+                }
+            }]
+        });
+
+        
+    });
+
+</script>
+
+
+</body>
+
+
+{% endblock %}

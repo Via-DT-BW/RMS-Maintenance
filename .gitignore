@@ -1,0 +1,6 @@
+app.log
+flask_session/
+__pycache__/
+Uploads/
+.claude/
+.env

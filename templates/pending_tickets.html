@@ -1,0 +1,1480 @@
+{% extends 'home.html' %}
+{% block content %}
+
+<body>
+    <div class="main-container">
+        <!-- Top Controls Section -->
+        <div class="top-controls">
+            <div class="filter-section">
+                <div>
+                    <label class="form-label">Start Date</label>
+                    <input type="date" id="date_ini" name="date_ini" class="form-control">
+                </div>
+                <div>
+                    <label class="form-label">End Date</label>
+                    <input type="date" id="date_fim" name="date_fim" class="form-control">
+                </div>
+                <div>
+                    <label class="form-label">Category</label>
+                    <select id="categoryFilter" class="form-select">
+                        <option value="">All Categories</option>
+                        <option value="DTAI">🔧 Automation Improvement</option>
+                        <option value="DTAS">🛠️ Automation Support</option>
+                        <option value="DTNA">📱 New Platform Software Development</option>
+                        <option value="DTSI">🐛 Platform Software Bug/Issue</option>
+                        <option value="DTIR">🔐 Software Internal Reports</option>
+                    </select>
+                </div>
+                <button type="button" class="filter-btn" onclick="filterTable()">
+                    <i class="fas fa-search me-2"></i>Filter
+                </button>
+            </div>
+        </div>
+
+        {% set dtai = [] %}
+        {% set dtas = [] %}
+        {% set dtna = [] %}
+        {% set dtsi = [] %}
+        {% set dtir = [] %}
+        {% for row in pending_requests %}
+            {% set cleaned_row = {
+                'internal_code': row.internal_code | default(''),
+                'title': row.title | default(''),
+                'requester': row.requester | default(''),
+                'reporter': row.reporter | default(''),
+                'prod_line': row.prod_line | default(''),
+                'n_sap': row.n_sap | default(''),
+                'reason': row.reason | default(''),
+                'current_process': row.current_process | default(''),
+                'action_to_improve': row.action_to_improve | default(''),
+                'observations_requester': row.observations_requester | default(''),
+                'department': row.department | default(''),
+                'objective': row.objective | default(''),
+                'app_name': row.app_name | default(''),
+                'issue': row.issue | default(''),
+                'expected_date': row.expected_date | default(''),
+                'status': row.status if row.status is not none else 0,
+                'filename': row.filename | default(''),
+                'responsible': row.responsible | default(''),
+                'created_at': row.created_at,
+                'updated_at': row.updated_at,
+                'notes': row.notes | default('')
+            } %}
+            {% if row.internal_code.startswith('DTAI') %}
+                {% set _ = dtai.append(cleaned_row) %}
+            {% elif row.internal_code.startswith('DTAS') %}
+                {% set _ = dtas.append(cleaned_row) %}
+            {% elif row.internal_code.startswith('DTNA') %}
+                {% set _ = dtna.append(cleaned_row) %}
+            {% elif row.internal_code.startswith('DTSI') %}
+                {% set _ = dtsi.append(cleaned_row) %}
+            {% elif row.internal_code.startswith('DTIR') %}
+                {% set _ = dtir.append(cleaned_row) %}
+            {% endif %}
+        {% endfor %}
+
+        {% for cat, tickets, table_id, extra in [
+            ('DTAI', dtai, 'dtaiTable', 'prod_line'),
+            ('DTAS', dtas, 'dtasTable', 'prod_line'),
+            ('DTNA', dtna, 'dtnaTable', 'department'),
+            ('DTSI', dtsi, 'dtsiTable', 'app_name')
+        ] %}
+        {% if tickets %}
+        <div class="table-section" data-category="{{ cat }}">
+            <h2>
+                {{ cat == 'DTAI' and 'Automation Improvement (DTAI)' or
+                cat == 'DTAS' and 'Automation Support (DTAS)' or
+                cat == 'DTNA' and 'New Platform Software Development (DTNA)' or
+                cat == 'DTSI' and 'Platform Software Bug/Issue (DTSI)' or
+                cat == 'DTIR' and 'Software Internal Reports (DTIR)' }}
+                <span class="table-info">{{ tickets|length }} tasks</span>
+            </h2>
+            <div class="data-table">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="{{ table_id }}">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Title</th>
+                                <th>Requester</th>
+                                <th>
+                                    {% if cat in ['DTAI', 'DTAS'] %}Line{% elif cat == 'DTNA' %}Department{% else %}Application{% endif %}
+                                </th>
+                                <th>Expected Date</th>
+                                <th>Status</th>
+                                <th>Responsible</th>
+                                <th>Created At</th>
+                                <th>Updated At</th>
+                                <th>Details</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in tickets %}
+                            <tr>
+                                <td><span class="badge-code">{{ row.internal_code }}</span></td>
+                                <td class="truncate-text" data-full-text="{{ row.title }}">{{ row.title }}</td>
+                                <td>{{ row.requester }}</td>
+                                <td class="truncate-text" data-full-text="{{ row[extra] }}">{{ row[extra] }}</td>
+                                <td>
+                                    {% if row.status == 3 %}
+                                        <span class="status-badge status-under-analysis">Under Analysis</span>
+                                    {% elif row.expected_date == '' or row.expected_date == 'Being analyzed' %}
+                                        <span class="status-badge status-being-analyzed">Being analyzed</span>
+                                    {% else %}
+                                        {{ row.expected_date }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if row.status == 0 %}
+                                        <span class="status-badge status-waiting">Waiting</span>
+                                    {% elif row.status == 1 %}
+                                        <span class="status-badge status-approved">In Progress</span>
+                                    {% elif row.status == 3 %}
+                                        <span class="status-badge status-under-analysis">Under Analysis</span>
+                                    {% elif row.status == 4 %}
+                                        <span class="status-badge" style="background-color: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 4px;">Waiting from DT</span>
+                                    {% elif row.status == 5 %}
+                                        <span class="status-badge" style="background-color: #fff3e0; color: #f57c00; padding: 4px 8px; border-radius: 4px;">Waiting from Requester</span>
+                                    {% elif row.status == 6 %}
+                                        <span class="status-badge" style="background-color: #e0f2f1; color: #00897b; padding: 4px 8px; border-radius: 4px;">Waiting for Line</span>
+                                    {% elif row.status == 7 %}
+                                        <span class="status-badge" style="background-color: #f3e5f5; color: #7b1fa2; padding: 4px 8px; border-radius: 4px;">Waiting Maintenance</span>
+                                    {% else %}
+                                        <span class="status-badge status-waiting">Waiting</span>
+                                    {% endif %}
+                                </td>
+                                <td class="truncate-text" data-full-text="{{ row.responsible | default('') }}">{{ row.responsible | default('N/A') }}</td>
+                                <td>
+                                    {% if row.created_at %}
+                                        {{ row.created_at.strftime('%d-%m-%Y %H:%M') if row.created_at.__class__.__name__ == 'datetime' else row.created_at }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if row.updated_at %}
+                                        {{ row.updated_at.strftime('%d-%m-%Y %H:%M') if row.updated_at.__class__.__name__ == 'datetime' else row.updated_at }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <i class="fas fa-eye detail-icon"
+                                       data-bs-toggle="modal"
+                                       data-bs-target="#ticketDetailModal"
+                                       onclick='showTicketDetails("{{ cat }}", {{ row|tojson|safe }})'></i>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        {% if row.status == 3 %}
+                                            <!-- Under Analysis status: only show approve to waiting button -->
+                                            <button type="button" class="action-btn approve-btn" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#approve_to_waiting_Modal" 
+                                                    onclick="setModalData('{{ row.internal_code }}', 'approve_to_waiting')" 
+                                                    title="Approve to Waiting">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        {% else %}
+                                            <!-- Normal status: show edit and conclude buttons -->
+                                            <button type="button" class="action-btn edit" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#edit_Modal" 
+                                                    onclick="setModalData('{{ row.internal_code }}', 'edit')" 
+                                                    title="Edit Task">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        {% endif %}
+                                        <button type="button" class="action-btn conclude" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#concluded_Modal" 
+                                                onclick="setModalData('{{ row.internal_code }}', 'concluded')" 
+                                                title="Mark as Completed">
+                                            <i class="fas fa-check-circle"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <!-- DTIR Section (Software Internal Reports) -->
+        {% if dtir %}
+        <div class="table-section" data-category="DTIR">
+            <h2>
+                Software Internal Reports (DTIR)
+                <span class="table-info">{{ dtir|length }} tasks</span>
+            </h2>
+            <div class="data-table">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="dtirTable">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Title</th>
+                                <th>Requester</th>
+                                <th>Requested By</th>
+                                <th>Expected Date</th>
+                                <th>Status</th>
+                                <th>Responsible</th>
+                                <th>Created At</th>
+                                <th>Updated At</th>
+                                <th>Details</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in dtir %}
+                            <tr>
+                                <td><span class="badge-code">{{ row.internal_code }}</span></td>
+                                <td class="truncate-text" data-full-text="{{ row.title }}">{{ row.title }}</td>
+                                <td>{{ row.requester }}</td>
+                                <td>{{ row.reporter or '' }}</td>
+                                <td>
+                                    {% if row.status == 3 %}
+                                        <span class="status-badge status-under-analysis">Under Analysis</span>
+                                    {% elif row.expected_date == '' or row.expected_date == 'Being analyzed' %}
+                                        <span class="status-badge status-being-analyzed">Being analyzed</span>
+                                    {% else %}
+                                        {{ row.expected_date }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if row.status == 0 %}
+                                        <span class="status-badge status-waiting">Waiting</span>
+                                    {% elif row.status == 1 %}
+                                        <span class="status-badge status-approved">In Progress</span>
+                                    {% elif row.status == 3 %}
+                                        <span class="status-badge status-under-analysis">Under Analysis</span>
+                                    {% elif row.status == 4 %}
+                                        <span class="status-badge" style="background-color: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 4px;">Waiting from DT</span>
+                                    {% elif row.status == 5 %}
+                                        <span class="status-badge" style="background-color: #fff3e0; color: #f57c00; padding: 4px 8px; border-radius: 4px;">Waiting from Requester</span>
+                                    {% elif row.status == 6 %}
+                                        <span class="status-badge" style="background-color: #e0f2f1; color: #00897b; padding: 4px 8px; border-radius: 4px;">Waiting for Line</span>
+                                    {% elif row.status == 7 %}
+                                        <span class="status-badge" style="background-color: #f3e5f5; color: #7b1fa2; padding: 4px 8px; border-radius: 4px;">Waiting Maintenance</span>
+                                    {% else %}
+                                        <span class="status-badge status-waiting">Waiting</span>
+                                    {% endif %}
+                                </td>
+                                <td class="truncate-text" data-full-text="{{ row.responsible | default('') }}">{{ row.responsible | default('N/A') }}</td>
+                                <td>
+                                    {% if row.created_at %}
+                                        {{ row.created_at.strftime('%d-%m-%Y %H:%M') if row.created_at.__class__.__name__ == 'datetime' else row.created_at }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if row.updated_at %}
+                                        {{ row.updated_at.strftime('%d-%m-%Y %H:%M') if row.updated_at.__class__.__name__ == 'datetime' else row.updated_at }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <i class="fas fa-eye detail-icon"
+                                       data-bs-toggle="modal"
+                                       data-bs-target="#ticketDetailModal"
+                                       onclick='showTicketDetails("DTIR", {{ row|tojson|safe }})'></i>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        {% if row.status == 3 %}
+                                            <!-- Under Analysis status: only show approve to waiting button -->
+                                            <button type="button" class="action-btn approve-btn" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#approve_to_waiting_Modal" 
+                                                    onclick="setModalData('{{ row.internal_code }}', 'approve_to_waiting')" 
+                                                    title="Approve to Waiting">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        {% else %}
+                                            <!-- Normal status: show edit and conclude buttons -->
+                                            <button type="button" class="action-btn edit" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#edit_Modal" 
+                                                    onclick="setModalData('{{ row.internal_code }}', 'edit')" 
+                                                    title="Edit Task">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        {% endif %}
+                                        <button type="button" class="action-btn conclude" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#concluded_Modal" 
+                                                onclick="setModalData('{{ row.internal_code }}', 'concluded')" 
+                                                title="Mark as Completed">
+                                            <i class="fas fa-check-circle"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if not dtai and not dtas and not dtna and not dtsi and not dtir %}
+        <div class="no-tickets">
+            <i class="fas fa-clipboard-list"></i>
+            <p>No tasks in progress. All approved requests have been completed.</p>
+        </div>
+        {% endif %}
+
+        <!-- Ticket Details Modal -->
+        <div class="modal fade" id="ticketDetailModal" tabindex="-1" aria-labelledby="ticketDetailModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="ticketDetailModalLabel">
+                            <i class="fas fa-ticket-alt"></i> Task Details
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="ticket-details-container">
+                            <div class="ticket-details-header" id="ticketDetailsHeader"></div>
+                            <div id="ticketDetailsContent" class="row"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approve to Waiting Modal -->
+        <div class="modal fade" id="approve_to_waiting_Modal" tabindex="-1" role="dialog" aria-labelledby="approveToWaitingModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="approveToWaitingModalLabel">
+                            <i class="fas fa-check"></i> Approve to Waiting
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="approveToWaitingForm" method="POST" action="{{ url_for('edit_task') }}">
+                        <div class="modal-body">
+                            <div class="detail-label">Internal Code</div>
+                            <div class="detail-value">
+                                <input type="text" class="form-control" name="request_code" id="approve_waiting_request_code_input" readonly />
+                            </div>
+                            <div class="detail-label">Expected Date</div>
+                            <div class="detail-value">
+                                <input type="date" class="form-control" id="approve_waiting_expected_date" name="expected_date" required>
+                            </div>
+                            <div class="detail-label">Responsible</div>
+                            <div class="detail-value">
+                                <select class="form-control" id="approve_waiting_responsible" name="responsible" required>
+                                    <option value="">Select Responsible</option>
+                                    <!-- Populated dynamically -->
+                                </select>
+                            </div>
+                            <div class="detail-label">Notes (optional)</div>
+                            <div class="detail-value">
+                                <textarea class="form-control" name="notes" id="approve_waiting_notes" rows="2" placeholder="Add any notes if needed..."></textarea>
+                            </div>
+                            <div class="detail-value mt-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="add_to_week_plan" id="approve_waiting_add_to_week_plan" value="1">
+                                    <label class="form-check-label" for="approve_waiting_add_to_week_plan">
+                                        <i class="fas fa-calendar-plus me-1"></i> Add this task to my Week Plan automatically
+                                    </label>
+                                </div>
+                            </div>
+                            <!-- Hidden status field set to 0 (Waiting) and approved to 1 -->
+                            <input type="hidden" name="status" value="0">
+                            <input type="hidden" name="approved" value="1">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>Close
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-2"></i>Approve to Waiting
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="concluded_Modal" tabindex="-1" role="dialog" aria-labelledby="concludedModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="concludeModalLabel">
+                            <i class="fas fa-check-circle"></i> Complete Ticket
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="concludeForm" method="POST" action="{{ url_for('conclude_request') }}">
+                        <div class="modal-body">
+                            <div class="detail-label">Internal Code</div>
+                            <div class="detail-value">
+                                <input type="text" class="form-control" name="request_code" id="approve_request_code_input" readonly />
+                            </div>
+                            
+                            <div class="detail-label">Start Date</div>
+                            <div class="detail-value">
+                                <input type="date" class="form-control" id="start_date" name="start_date" required>
+                            </div>
+                            
+                            <div class="detail-label">End Date</div>
+                            <div class="detail-value">
+                                <input type="date" class="form-control" id="end_date" name="end_date" required>
+                            </div>
+                            
+                            <div class="detail-label">Time (hours)</div>
+                            <div class="detail-value">
+                                <input type="number" class="form-control" id="time" name="time" min="1" step="1" required>
+                                <small class="text-info mt-2 d-block"><i class="fas fa-info-circle"></i> Tasks hours will be automatically added to this value</small>
+                                <div id="taskHoursSummary" class="alert alert-light mt-3" style="display: none;">
+                                    <strong>Tasks Associated:</strong>
+                                    <div id="taskHoursList" style="margin-top: 10px; max-height: 150px; overflow-y: auto;"></div>
+                                    <div class="mt-2 pt-2 border-top">
+                                        <strong>Total from tasks: <span id="totalTaskHours">0</span> hours</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="detail-label">Observations</div>
+                            <div class="detail-value">
+                                <textarea class="form-control" id="observations" name="observations" maxlength="450" rows="4" required></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>Close
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-2"></i>Complete Ticket
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div class="modal fade" id="edit_Modal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editModalLabel">
+                            <i class="fas fa-edit"></i> Edit Task
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="editForm" method="POST" action="{{ url_for('edit_task') }}">
+                        <input type="hidden" name="request_code" id="edit_request_code">
+                        <div class="modal-body">
+                            <div class="detail-label">Status</div>
+                            <div class="detail-value">
+                                <select class="form-control status-select" id="edit_status" name="status" required onchange="updateStatusSelectStyle()">
+                                    <option value="0">Waiting</option>
+                                    <option value="1">In Progress</option>
+                                    <option value="3">Under Analysis</option>
+                                    <option value="4">Waiting from DT</option>
+                                    <option value="5">Waiting from Requester</option>
+                                    <option value="6">Waiting for Line Availability</option>
+                                    <option value="7">Waiting Maintenance Action</option>
+                                </select>
+                            </div>
+
+                            <div class="detail-label">Expected Date</div>
+                            <div class="detail-value">
+                                <input type="date" class="form-control" id="edit_expected_date" name="expected_date">
+                            </div>
+
+                            <div class="detail-label">Responsible</div>
+                            <div class="detail-value">
+                                <input type="text" class="form-control" id="edit_responsible" name="responsible">
+                            </div>
+
+                            <div class="detail-label">Notes</div>
+                            <div class="detail-value">
+                                <textarea class="form-control" id="edit_notes" name="notes" rows="3" placeholder="Add notes..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .compact-table {
+            table-layout: fixed;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .compact-table th, .compact-table td {
+            padding: 0.5rem;
+            vertical-align: middle;
+            word-wrap: break-word;
+            overflow: hidden;
+        }
+        .truncate-text {
+            max-width: 150px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .compact-table th:nth-child(1), .compact-table td:nth-child(1) {
+            width: 10%;
+        }
+        .compact-table th:nth-child(2), .compact-table td:nth-child(2) {
+            width: 25%;
+        }
+        .compact-table th:nth-child(3), .compact-table td:nth-child(3) {
+            width: 15%;
+        }
+        .compact-table th:nth-child(4), .compact-table td:nth-child(4) {
+            width: 15%;
+        }
+        .compact-table th:nth-child(5), .compact-table td:nth-child(5) {
+            width: 15%;
+        }
+        .compact-table th:nth-child(6), .compact-table td:nth-child(6) {
+            width: 10%;
+        }
+        .compact-table th:nth-child(7), .compact-table td:nth-child(7) {
+            width: 5%;
+        }
+        .compact-table th:nth-child(8), .compact-table td:nth-child(8) {
+            width: 10%;
+        }
+        .thumbnail {
+            max-width: 100px;
+            max-height: 100px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Remove background colors from status select in edit modal */
+        #edit_status.status-select {
+            background-color: #fff !important;
+            color: #333 !important;
+        }
+        
+        #edit_status.status-select.status-waiting {
+            background-color: #fff !important;
+            color: #333 !important;
+        }
+        
+        #edit_status.status-select.status-approved {
+            background-color: #fff !important;
+            color: #333 !important;
+        }
+        
+        /* Keep normal form-control styling */
+        #edit_status.form-control {
+            background-color: #fff;
+            border: 1px solid #ced4da;
+            color: #495057;
+        }
+        
+        #edit_status.form-control:focus {
+            background-color: #fff;
+            border-color: #80bdff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+            color: #495057;
+        }
+
+        .edit {
+            background: rgba(59, 130, 246, 0.10);
+            color: #2563eb;
+            border: 1.5px solid rgba(59, 130, 246, 0.35);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-right: 4px;
+            transition: background 0.2s, border 0.2s, color 0.2s, transform 0.2s;
+            box-shadow: none;
+        }
+        .edit:hover {
+            background: rgba(59, 130, 246, 0.18);
+            border-color: #2563eb;
+            color: #1d4ed8;
+            transform: scale(1.08);
+        }
+        .approve-btn {
+            background: rgba(34, 197, 94, 0.10);
+            color: #15803d;
+            border: 1.5px solid rgba(34, 197, 94, 0.35);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            margin-right: 4px;
+            transition: background 0.2s, border 0.2s, color 0.2s, transform 0.2s;
+            box-shadow: none;
+        }
+        .approve-btn:hover {
+            background: rgba(34, 197, 94, 0.18);
+            border-color: #22c55e;
+            color: #166534;
+            transform: scale(1.08);
+        }
+            transform: scale(1.08);
+        }
+        .conclude {
+            background: rgba(34, 197, 94, 0.10);
+            color: #15803d;
+            border: 1.5px solid rgba(34, 197, 94, 0.35);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: background 0.2s, border 0.2s, color 0.2s, transform 0.2s;
+            box-shadow: none;
+        }
+        .conclude:hover {
+            background: rgba(34, 197, 94, 0.18);
+            border-color: #22c55e;
+            color: #166534;
+            transform: scale(1.08);
+        }
+        .action-buttons {
+            display: flex;
+            gap: 4px;
+        }
+    </style>
+
+    <script>
+        let responsibleOptions = [];
+
+        // Load responsible users on page load
+        async function loadResponsibleUsers() {
+            try {
+                const response = await fetch('/get_responsible_users');
+                const data = await response.json();
+                if (data.success) {
+                    responsibleOptions = [
+                        { value: '', label: 'Select Responsible' },
+                        ...data.users.map(user => ({
+                            value: user.username,
+                            label: user.username
+                        }))
+                    ];
+                } else {
+                    console.error('Failed to load responsible users:', data.message);
+                    responsibleOptions = [{ value: '', label: 'Select Responsible' }];
+                }
+            } catch (error) {
+                console.error('Error loading responsible users:', error);
+                responsibleOptions = [{ value: '', label: 'Select Responsible' }];
+            }
+        }
+
+        // Load associated tasks hours for a ticket
+        async function loadAssociatedTasksHours(ticketCode) {
+            try {
+                const response = await fetch(`/get_ticket_tasks/${ticketCode}`);
+                const data = await response.json();
+
+                if (data.success && data.tasks && data.tasks.length > 0) {
+                    let totalHours = 0;
+                    let tasksList = '';
+
+                    data.tasks.forEach(task => {
+                        const hours = parseFloat(task.time_spent) || 0;
+                        totalHours += hours;
+                        const taskDesc = task.description || task.title || 'No description';
+                        tasksList += `<div class="d-flex justify-content-between align-items-center mb-2 pb-2" style="border-bottom: 1px solid #e9ecef;">
+                            <div>
+                                <strong>${taskDesc}</strong>
+                                <small class="text-muted d-block">${task.status}</small>
+                            </div>
+                            <span class="badge bg-primary">${hours} h</span>
+                        </div>`;
+                    });
+
+                    document.getElementById('taskHoursList').innerHTML = tasksList;
+                    document.getElementById('totalTaskHours').textContent = totalHours.toFixed(2);
+                    document.getElementById('taskHoursSummary').style.display = 'block';
+
+                    // Auto-fill the time field with total hours from tasks
+                    document.getElementById('time').value = Math.ceil(totalHours);
+                } else {
+                    // Sem tasks associadas
+                    document.getElementById('taskHoursSummary').style.display = 'none';
+                    document.getElementById('time').value = 1;
+                }
+            } catch (error) {
+                console.error('Error loading associated tasks hours:', error);
+                document.getElementById('taskHoursSummary').style.display = 'none';
+                document.getElementById('time').value = 1;
+            }
+        }
+
+        $(document).ready(function() {
+            // Load responsible users first
+            loadResponsibleUsers();
+            
+            const maxLength = 50;
+            document.querySelectorAll('.truncate-text').forEach(cell => {
+                const fullText = cell.getAttribute('data-full-text') || cell.textContent;
+                if (fullText.length > maxLength) {
+                    cell.textContent = fullText.substring(0, maxLength - 3) + '...';
+                }
+            });
+        });
+
+        function setModalData(id, action) {
+            try {
+                if (action === 'edit') {
+                    // Show loading state
+                    const editModalBody = document.querySelector('#edit_Modal .modal-body');
+                    const originalContent = editModalBody.innerHTML;
+                    editModalBody.innerHTML = '<div class="text-center"><div class="loading-spinner"></div> Loading task data...</div>';
+                    
+                    // Open modal immediately to show loading
+                    $('#edit_Modal').modal('show');
+                    
+                    // Use AJAX to get fresh data from the database
+                    fetch(`/get_task_details/${id}`)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(taskData => {
+                            if (taskData.error) {
+                                console.error('Error loading task data:', taskData.error);
+                                throw new Error(taskData.error);
+                            }
+
+                            // Restore original modal content
+                            editModalBody.innerHTML = originalContent;
+
+                            // Set form values
+                            document.getElementById('edit_request_code').value = id || '';
+                            
+                            const statusSelect = document.getElementById('edit_status');
+                            // Use status directly from database: 0 = Waiting, 1 = In Progress
+                            const status = taskData.status !== null && taskData.status !== undefined ? parseInt(taskData.status) : 0;
+                            statusSelect.value = status.toString();
+                            
+                            // Disable "Under Analysis" option if current status is not Under Analysis
+                            const underAnalysisOption = statusSelect.querySelector('option[value="3"]');
+                            if (status !== 3 && underAnalysisOption) {
+                                underAnalysisOption.disabled = true;
+                                underAnalysisOption.style.display = 'none';
+                            } else if (status === 3 && underAnalysisOption) {
+                                underAnalysisOption.disabled = false;
+                                underAnalysisOption.style.display = 'block';
+                            }
+                            
+                            updateStatusSelectStyle();
+
+                            const expectedDateInput = document.getElementById('edit_expected_date');
+                            // Handle date formatting - improved logic
+                            let expectedDate = '';
+                            if (taskData.expected_date) {
+                                let dateStr = taskData.expected_date.toString().trim();
+                                
+                                // Skip empty or "Being analyzed" values
+                                if (dateStr === '' || dateStr.toLowerCase() === 'being analyzed') {
+                                    expectedDate = '';
+                                } else {
+                                    // Handle different date formats
+                                    if (dateStr.includes('T')) {
+                                        // ISO datetime format: split at T
+                                        expectedDate = dateStr.split('T')[0];
+                                    } else if (dateStr.includes(' ')) {
+                                        // Date with time: split at space
+                                        expectedDate = dateStr.split(' ')[0];
+                                    } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                                        // Already in YYYY-MM-DD format
+                                        expectedDate = dateStr;
+                                    } else {
+                                        // Try to parse as date and format
+                                        try {
+                                            const parsedDate = new Date(dateStr);
+                                            if (!isNaN(parsedDate.getTime())) {
+                                                expectedDate = parsedDate.toISOString().split('T')[0];
+                                            } else {
+                                                expectedDate = dateStr; // Use as-is if can't parse
+                                            }
+                                        } catch (e) {
+                                            expectedDate = dateStr; // Use as-is if error
+                                        }
+                                    }
+                                }
+                            }
+                            expectedDateInput.value = expectedDate;
+
+                            const responsibleInput = document.getElementById('edit_responsible');
+                            responsibleInput.value = taskData.responsible || '';
+
+                            const notesInput = document.getElementById('edit_notes');
+                            notesInput.value = taskData.notes || '';
+
+                            console.log('Task data loaded:', {
+                                id: id,
+                                status: status,
+                                expected_date: expectedDate,
+                                expected_date_raw: taskData.expected_date,
+                                responsible: taskData.responsible
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Error fetching task details:', error);
+                            // Restore original content on error
+                            editModalBody.innerHTML = originalContent;
+                            // Set default values
+                            document.getElementById('edit_request_code').value = id || '';
+                            document.getElementById('edit_status').value = '0';
+                            document.getElementById('edit_expected_date').value = '';
+                            document.getElementById('edit_responsible').value = '';
+                            document.getElementById('edit_notes').value = '';
+                            updateStatusSelectStyle();
+                            
+                            alert('Error loading task data: ' + error.message);
+                        });
+                } else if (action === 'approve_to_waiting') {
+                    document.getElementById('approve_waiting_request_code_input').value = id;
+                    
+                    // Populate responsible dropdown
+                    const responsibleSelect = document.getElementById('approve_waiting_responsible');
+                    if (responsibleSelect) {
+                        responsibleSelect.innerHTML = '';
+                        responsibleOptions.forEach(option => {
+                            const optElement = document.createElement('option');
+                            optElement.value = option.value;
+                            optElement.textContent = option.label;
+                            responsibleSelect.appendChild(optElement);
+                        });
+                    }
+                    
+                    $('#approve_to_waiting_Modal').modal('show');
+                } else if (action === 'concluded') {
+                    document.getElementById('approve_request_code_input').value = id;
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('start_date').max = today;
+                    document.getElementById('end_date').max = today;
+                    document.getElementById('start_date').addEventListener('change', validateDates);
+                    document.getElementById('end_date').addEventListener('change', validateDates);
+                    
+                    // Carregar e mostrar as horas das tasks associadas
+                    loadAssociatedTasksHours(id);
+                    
+                    $('#concluded_Modal').modal('show');
+                }
+            } catch (e) {
+                console.error('Error in setModalData:', e);
+                alert('Failed to load modal data: ' + e.message);
+            }
+        }
+
+        function validateEditForm() {
+            const requestCode = document.getElementById('edit_request_code').value;
+            const status = document.getElementById('edit_status').value;
+            console.log('Form submission - request_code:', requestCode, 'status:', status);
+            if (!requestCode || status === null || status === undefined) {
+                alert('Please ensure all required fields are filled.');
+                return false;
+            }
+            return true;
+        }
+
+        // Add form submission handler for edit form
+        document.getElementById('editForm').addEventListener('submit', function(e) {
+            if (!validateEditForm()) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        document.getElementById('concludeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const timeInput = document.getElementById('time');
+            const hours = parseInt(timeInput.value, 10);
+
+            if (isNaN(hours) || hours < 1) {
+                alert('Please enter a valid number of hours (integer).');
+                return false;
+            }
+            timeInput.value = hours;
+
+            // Collect form data
+            const requestCode = document.getElementById('approve_request_code_input').value;
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            const time = document.getElementById('time').value;
+            const observations = document.getElementById('observations').value;
+
+            if (!requestCode || !startDate || !endDate) {
+                alert('Please fill all required fields');
+                return false;
+            }
+
+            try {
+                const response = await fetch('/conclude_request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        request_code: requestCode,
+                        start_date: startDate,
+                        end_date: endDate,
+                        time: time,
+                        observations: observations
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('concluded_Modal'));
+                    if (modal) modal.hide();
+
+                    // Show success toast
+                    notify('success', data.message || 'Ticket completed successfully!');
+
+                    // Reset form
+                    document.getElementById('concludeForm').reset();
+
+                    // Reload after delay to show toast
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    Swal.fire({
+                        title: 'Error',
+                        text: data.message || 'Error concluding ticket',
+                        icon: 'error',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    title: 'Error',
+                    text: 'Error concluding ticket: ' + error.message,
+                    icon: 'error',
+                    confirmButtonColor: '#dc3545'
+                });
+            }
+        });
+
+        // Add form submission handler for approveToWaitingForm with SweetAlert
+        document.getElementById('approveToWaitingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Submit the form
+            this.submit();
+            
+            // Show success message after a short delay
+            setTimeout(() => {
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Ticket updated successfully',
+                    icon: 'success',
+                    confirmButtonColor: '#28a745'
+                }).then(() => {
+                    location.reload();
+                });
+            }, 500);
+        });
+
+        function validateDates() {
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            const submitBtn = document.querySelector('#concludeForm button[type="submit"]');
+        }
+
+        function filterTable() {
+            try {
+                const dateIni = document.getElementById('date_ini').value;
+                const dateFim = document.getElementById('date_fim').value;
+                const categoryFilter = document.getElementById('categoryFilter').value;
+                
+                const tableSections = document.querySelectorAll('.table-section');
+                
+                tableSections.forEach(section => {
+                    const category = section.dataset.category;
+                    
+                    if (categoryFilter && category !== categoryFilter) {
+                        section.style.display = 'none';
+                        return;
+                    }
+                    section.style.display = 'block';
+                    
+                    const rows = section.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        const expectedDateCell = row.querySelector('td:nth-child(5)');
+                        const expectedDate = expectedDateCell?.textContent?.trim();
+                        
+                        let showRow = true;
+                        
+                        if (dateIni && dateFim && expectedDate && !expectedDate.includes('Being analyzed') && !expectedDate.includes('Under Analysis')) {
+                            const date = new Date(expectedDate);
+                            const ini = new Date(dateIni);
+                            const fim = new Date(dateFim);
+                            
+                            if (date < ini || date > fim) {
+                                showRow = false;
+                            }
+                        }
+                        
+                        row.style.display = showRow ? '' : 'none';
+                    });
+                });
+            } catch (e) {
+                console.error('Error in filterTable:', e);
+                alert('Failed to apply filter.');
+            }
+        }
+
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') return unsafe || 'N/A';
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function showTicketDetails(ticketType, ticketData) {
+            try {
+                const internal_code = ticketData.internal_code;
+                
+                // Use AJAX to get fresh data from the database
+                fetch(`/get_task_details/${internal_code}`)
+                    .then(response => response.json())
+                    .then(freshData => {
+                        if (freshData.error) {
+                            throw new Error(freshData.error);
+                        }
+                        
+                        displayTicketDetails(ticketType, freshData);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching fresh ticket details:', error);
+                        // Fallback to passed data
+                        displayTicketDetails(ticketType, ticketData);
+                    });
+            } catch (e) {
+                console.error('Error in showTicketDetails:', e);
+                displayTicketDetails(ticketType, ticketData);
+            }
+        }
+
+        function displayTicketDetails(ticketType, ticketData) {
+            const detailsContent = document.getElementById('ticketDetailsContent');
+            const detailsHeader = document.getElementById('ticketDetailsHeader');
+            let content = '';
+            let headerText = '';
+
+            const safeValue = (value) => {
+                if (value === null || value === undefined || value === '') {
+                    return 'N/A';
+                }
+                return escapeHtml(String(value));
+            };
+
+            const safeData = {
+                internal_code: safeValue(ticketData.internal_code),
+                title: safeValue(ticketData.title),
+                requester: safeValue(ticketData.requester),
+                prod_line: safeValue(ticketData.prod_line),
+                n_sap: safeValue(ticketData.n_sap),
+                reason: safeValue(ticketData.reason),
+                current_process: safeValue(ticketData.current_process),
+                action_to_improve: safeValue(ticketData.action_to_improve),
+                observations_requester: safeValue(ticketData.observations_requester),
+                department: safeValue(ticketData.department),
+                objective: safeValue(ticketData.objective),
+                app_name: safeValue(ticketData.app_name),
+                issue: safeValue(ticketData.issue),
+                expected_date: safeValue(ticketData.expected_date),
+                status: ticketData.status !== null && ticketData.status !== undefined ? parseInt(ticketData.status) : 0,
+                filename: safeValue(ticketData.filename),
+                responsible: safeValue(ticketData.responsible),
+                notes: safeValue(ticketData.notes),
+                subcategory: safeValue(ticketData.subcategory),
+                eight_d_number: safeValue(ticketData['8D_Number']),
+                complaint_number: safeValue(ticketData.complaint_number),
+                hard_savings: ticketData.hard_savings ? `€ ${parseFloat(ticketData.hard_savings).toLocaleString('pt-PT', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : 'N/A',
+                other_description: safeValue(ticketData.other_description),
+                priority: safeValue(ticketData.priority)
+            };
+
+            const getStatusBadge = (status) => {
+                if (status === 0) return '<span class="status-badge status-waiting">Waiting</span>';
+                if (status === 1) return '<span class="status-badge status-approved">In Progress</span>';
+                if (status === 2) return '<span class="status-badge status-done">Completed</span>';
+                if (status === 3) return '<span class="status-badge status-under-analysis">Under Analysis</span>';
+                if (status === 4) return '<span class="status-badge status-in-progress">Waiting from DT</span>';
+                if (status === 5) return '<span class="status-badge status-in-progress">Waiting from Requester</span>';
+                if (status === 6) return '<span class="status-badge status-in-progress">Waiting for Line</span>';
+                if (status === 7) return '<span class="status-badge status-in-progress">Waiting Maintenance</span>';
+                if (status === -1) return '<span class="status-badge status-rejected">Rejected</span>';
+                return '<span class="status-badge status-being-analyzed">Awaiting Approval</span>';
+            };
+
+            const getFileDisplay = (filename) => {
+                if (filename === 'N/A' || !filename) {
+                    return 'None';
+                }
+                const extension = filename.split('.').pop().toLowerCase();
+                const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
+                const fileUrl = `/Uploads/${encodeURIComponent(filename)}`;
+                if (imageExtensions.includes(extension)) {
+                    return `<a href="${fileUrl}" target="_blank"><img src="${fileUrl}" class="thumbnail" alt="${filename}"></a>`;
+                } else {
+                    return `<a href="${fileUrl}" download>${filename}</a>`;
+                }
+            };
+
+            if (ticketType === 'DTAI') {
+                headerText = `Automation Improvement (DTAI) - ${safeData.internal_code}`;
+                content = `
+                    <div class="col-md-6">
+                        <div class="detail-label">Code</div>
+                        <div class="detail-value">${safeData.internal_code}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Requester</div>
+                        <div class="detail-value">${safeData.requester}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Category</div>
+                        <div class="detail-value">${safeData.reason}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Production Line</div>
+                        <div class="detail-value">${safeData.prod_line}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">SAP Nº</div>
+                        <div class="detail-value">${safeData.n_sap}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value">${getStatusBadge(safeData.status)}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Created At</div>
+                        <div class="detail-value">${safeData.created_at}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Updated At</div>
+                        <div class="detail-value">${safeData.updated_at}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">File</div>
+                        <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
+                    </div>
+                    ${safeData.subcategory !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Subcategory</div><div class="detail-value">${safeData.subcategory}</div></div>` : ''}
+                    ${safeData.eight_d_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">8D Number</div><div class="detail-value">${safeData.eight_d_number}</div></div>` : ''}
+                    ${safeData.complaint_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Complaint Number</div><div class="detail-value">${safeData.complaint_number}</div></div>` : ''}
+                    ${safeData.hard_savings !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Hard Savings</div><div class="detail-value">${safeData.hard_savings}</div></div>` : ''}
+                    <div class="col-md-12">
+                        <div class="detail-label">Title</div>
+                        <div class="detail-value">${safeData.title}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Current Process</div>
+                        <div class="detail-value">${safeData.current_process}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Improvement Action</div>
+                        <div class="detail-value">${safeData.action_to_improve}</div>
+                    </div>
+                    ${safeData.other_description !== 'N/A' ? `<div class="col-md-12"><div class="detail-label">Additional Description</div><div class="detail-value">${safeData.other_description}</div></div>` : ''}
+                `;
+            } else if (ticketType === 'DTAS') {
+                headerText = `Automation Support (DTAS) - ${safeData.internal_code}`;
+                content = `
+                    <div class="col-md-6">
+                        <div class="detail-label">Code</div>
+                        <div class="detail-value">${safeData.internal_code}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Requester</div>
+                        <div class="detail-value">${safeData.requester}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Category</div>
+                        <div class="detail-value">${safeData.reason}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Production Line</div>
+                        <div class="detail-value">${safeData.prod_line}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">SAP Nº</div>
+                        <div class="detail-value">${safeData.n_sap}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value">${getStatusBadge(safeData.status)}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Created At</div>
+                        <div class="detail-value">${safeData.created_at}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Updated At</div>
+                        <div class="detail-value">${safeData.updated_at}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">File</div>
+                        <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
+                    </div>
+                    ${safeData.subcategory !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Subcategory</div><div class="detail-value">${safeData.subcategory}</div></div>` : ''}
+                    ${safeData.eight_d_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">8D Number</div><div class="detail-value">${safeData.eight_d_number}</div></div>` : ''}
+                    ${safeData.complaint_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Complaint Number</div><div class="detail-value">${safeData.complaint_number}</div></div>` : ''}
+                    ${safeData.hard_savings !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Hard Savings</div><div class="detail-value">${safeData.hard_savings}</div></div>` : ''}
+                    <div class="col-md-12">
+                        <div class="detail-label">Title</div>
+                        <div class="detail-value">${safeData.title}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Current Process</div>
+                        <div class="detail-value">${safeData.current_process}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Corrective Action</div>
+                        <div class="detail-value">${safeData.action_to_improve}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Description</div>
+                        <div class="detail-value">${safeData.observations_requester}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Machine Operational State</div>
+                        <div class="detail-value">${safeData.machine_operational_state || 'N/A'}</div>
+                    </div>
+                    ${safeData.other_description !== 'N/A' ? `<div class="col-md-12"><div class="detail-label">Additional Description</div><div class="detail-value">${safeData.other_description}</div></div>` : ''}
+                `;
+            } else if (ticketType === 'DTNA') {
+                headerText = `New Platform Software Development (DTNA) - ${safeData.internal_code}`;
+                content = `
+                    <div class="col-md-6">
+                        <div class="detail-label">Code</div>
+                        <div class="detail-value">${safeData.internal_code}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Requester</div>
+                        <div class="detail-value">${safeData.requester}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Department</div>
+                        <div class="detail-value">${safeData.department}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Reason</div>
+                        <div class="detail-value">${safeData.reason}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value">${getStatusBadge(safeData.status)}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Created At</div>
+                        <div class="detail-value">${safeData.created_at}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Updated At</div>
+                        <div class="detail-value">${safeData.updated_at}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">File</div>
+                        <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Title</div>
+                        <div class="detail-value">${safeData.title}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Current Process</div>
+                        <div class="detail-value">${safeData.current_process}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Objective</div>
+                        <div class="detail-value">${safeData.objective}</div>
+                    </div>
+                `;
+            } else if (ticketType === 'DTSI') {
+                headerText = `Platform Software Bug/Issue (DTSI) - ${safeData.internal_code}`;
+                content = `
+                    <div class="col-md-6">
+                        <div class="detail-label">Code</div>
+                        <div class="detail-value">${safeData.internal_code}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Requester</div>
+                        <div class="detail-value">${safeData.requester}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Application</div>
+                        <div class="detail-value">${safeData.app_name}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Reason</div>
+                        <div class="detail-value">${safeData.reason}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value">${getStatusBadge(safeData.status)}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">File</div>
+                        <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Created At</div>
+                        <div class="detail-value">${safeData.created_at}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Updated At</div>
+                        <div class="detail-value">${safeData.updated_at}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Title</div>
+                        <div class="detail-value">${safeData.title}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Issue</div>
+                        <div class="detail-value">${safeData.issue}</div>
+                    </div>
+                `;
+            } else if (ticketType === 'DTIR') {
+                headerText = `Software Internal Reports (DTIR) - ${safeData.internal_code}`;
+                content = `
+                    <div class="col-md-6">
+                        <div class="detail-label">Code</div>
+                        <div class="detail-value">${safeData.internal_code}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Requester</div>
+                        <div class="detail-value">${safeData.requester}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Reporter</div>
+                        <div class="detail-value">${safeValue(ticketData.reporter)}</div>
+                    </div>
+                    ${safeData.priority !== 'N/A' ? `<div class="col-md-6">
+                        <div class="detail-label">Priority</div>
+                        <div class="detail-value"><span class="badge bg-${safeData.priority === 'High' ? 'danger' : safeData.priority === 'Medium' ? 'warning' : 'secondary'}">${safeData.priority}</span></div>
+                    </div>` : ''}
+                    <div class="col-md-6">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value">${getStatusBadge(safeData.status)}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Created At</div>
+                        <div class="detail-value">${safeValue(ticketData.created_at)}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Updated At</div>
+                        <div class="detail-value">${safeValue(ticketData.updated_at)}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">File</div>
+                        <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Title</div>
+                        <div class="detail-value">${safeData.title}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Description</div>
+                        <div class="detail-value">${safeValue(ticketData.description)}</div>
+                    </div>
+                `;
+            }
+
+            detailsHeader.innerHTML = headerText;
+            detailsContent.innerHTML = content;
+        }
+
+        function updateStatusSelectStyle() {
+            try {
+                const statusSelect = document.getElementById('edit_status');
+                if (statusSelect) {
+                    // Remove all status classes to keep normal appearance
+                    statusSelect.classList.remove('status-waiting', 'status-approved');
+                    // Don't add any color classes - keep it neutral
+                }
+            } catch (e) {
+                console.error('Error in updateStatusSelectStyle:', e);
+            }
+        }
+
+        // Toastr-like SweetAlert2 toast
+        function notify(type, msg) {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: type,
+                title: msg,
+                showConfirmButton: false,
+                timer: 3500,
+                timerProgressBar: true,
+                customClass: {
+                    popup: 'swal2-toastr-popup'
+                },
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                }
+            });
+        }
+    </script>
+</body>
+{% endblock %}

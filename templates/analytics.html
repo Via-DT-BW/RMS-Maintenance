@@ -1,0 +1,2229 @@
+{% extends 'home.html' %}
+{% block content %}
+
+<head>
+    <link href="static/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+    <link href="static/vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
+    
+    <!-- Highcharts -->
+    <script src="https://cdn.jsdelivr.net/npm/highcharts@11.1.0/highcharts.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highcharts@11.1.0/modules/exporting.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highcharts@11.1.0/modules/export-data.js"></script>
+    
+    <style>
+        .analytics-container {
+            padding: 40px 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            max-width: 1800px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+        
+        .filter-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 5px solid #3498db;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 20px;
+        }
+        
+        .category-selector {
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        
+        .btn-category {
+            padding: 12px 24px;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            background-color: white;
+            color: #3498db;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-category:hover {
+            background-color: #ecf7ff;
+            border-color: #2980b9;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.2);
+        }
+        
+        .btn-category.active {
+            background-color: #3498db;
+            color: white;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+        }
+        
+        .btn-category.active:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+        }
+        
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: flex-end;
+            margin-bottom: 15px;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 180px;
+        }
+        
+        .filter-group label {
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .filter-group input,
+        .filter-group select {
+            padding: 12px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s;
+            background-color: #fafafa;
+        }
+        
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: #3498db;
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-analytics {
+            padding: 11px 22px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        
+        .btn-refresh {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .btn-refresh:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(52, 152, 219, 0.4);
+        }
+        
+        .btn-export {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .btn-export:hover {
+            background-color: #27ae60;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(46, 204, 113, 0.4);
+        }
+        
+        .kpi-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .kpi-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 28px 20px;
+            border-radius: 12px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.16);
+        }
+        
+        .kpi-card.completed {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+        
+        .kpi-card.pending {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+        
+        .kpi-card.in-progress {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        }
+        
+        .kpi-card.rate {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+        }
+        
+        .kpi-value {
+            font-size: 38px;
+            font-weight: 700;
+            margin: 12px 0;
+        }
+        
+        .kpi-label {
+            font-size: 13px;
+            opacity: 0.95;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+        
+        .chart-section {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        @media (max-width: 1400px) {
+            .chart-section {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        
+        .chart-container:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+        
+        .chart-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        
+        .chart-area {
+            width: 100%;
+            height: 600px;
+            overflow: auto;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .full-width .chart-area {
+            height: 650px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #ecf0f1;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .table-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+        
+        .responsive-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .responsive-table thead {
+            background-color: #ecf0f1;
+        }
+        
+        .responsive-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #bdc3c7;
+        }
+        
+        .responsive-table td {
+            padding: 12px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .responsive-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .badge-completed {
+            background-color: #2ecc71;
+        }
+        
+        .badge-pending {
+            background-color: #f39c12;
+        }
+        
+        .section-header {
+            margin: 30px 0 30px 0;
+        }
+        
+        .section-header h2 {
+            color: #2c3e50;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+        
+        .filter-info {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 12px;
+            padding: 6px 10px;
+            background-color: transparent;
+            border-radius: 4px;
+            border-left: none;
+            line-height: 1.4;
+            text-align: right;
+            font-style: italic;
+        }
+        
+        .filter-info strong {
+            color: #555;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            .filter-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filter-row {
+                flex-direction: column;
+            }
+            
+            .filter-group {
+                min-width: 100%;
+            }
+            
+            .filter-buttons {
+                width: 100%;
+            }
+            
+            .btn-analytics {
+                flex: 1;
+                min-width: 120px;
+            }
+            
+            .category-selector {
+                min-width: 100%;
+            }
+            
+            .analytics-container {
+                padding: 15px 10px;
+            }
+            
+            .kpi-section {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .chart-area {
+                height: 400px;
+            }
+            
+            .full-width .chart-area {
+                height: 400px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .kpi-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .kpi-value {
+                font-size: 28px;
+            }
+            
+            .filter-section {
+                padding: 15px;
+            }
+            
+            .chart-container {
+                padding: 15px;
+            }
+            
+            .analytics-container {
+                padding: 10px;
+            }
+            
+            .chart-area {
+                height: 300px;
+            }
+            
+            .full-width .chart-area {
+                height: 300px;
+            }
+            
+            .section-header h2 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="analytics-container">
+        
+        <!-- Filters Section -->
+        <div class="filter-section">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="startDate">Start Date</label>
+                    <input type="date" id="startDate" value="" onchange="loadAnalyticsData()">
+                </div>
+                <div class="filter-group">
+                    <label for="endDate">End Date</label>
+                    <input type="date" id="endDate" value="" onchange="loadAnalyticsData()">
+                </div>
+                <div class="filter-group">
+                    <label for="ticketTypes">Ticket Types</label>
+                    <select id="ticketTypes" onchange="loadAnalyticsData()">
+                        <option value="">All Types</option>
+                        <option value="DTAI">Automation Improvement</option>
+                        <option value="DTAS">Automation Support</option>
+                        <option value="DTNA">New Application</option>
+                        <option value="DTSI">Software Issue</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="prodLine">Production Line</label>
+                    <select id="prodLine" onchange="loadAnalyticsData()">
+                        <option value="">All Lines</option>
+                    </select>
+                </div>
+                <div class="filter-group" id="automationResponsibleFilter" style="display: none;">
+                    <div style="font-weight: 700; color: #2c3e50; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Responsible</div>
+                    <select id="automationResponsible" onchange="loadAnalyticsData()">
+                        <option value="">All Responsible</option>
+                    </select>
+                </div>
+            </div>
+            <div class="category-selector">
+                <button class="btn-category active" id="btnAutomation" onclick="setMainCategory('automation'); loadAnalyticsData()">Automation</button>
+                <button class="btn-category" id="btnSoftware" onclick="setMainCategory('software'); loadAnalyticsData()">Software</button>
+            </div>
+        </div>
+        
+        <!-- Production Line Analytics Section (Automation Only) -->
+        <div id="automationSection" style="display: block;">
+            <!-- Production Line Analytics Section Title -->
+            <div class="section-header">
+                <h2>Production Line Analytics</h2>
+            </div>
+            
+            <!-- Week Selection Buttons -->
+            <div id="weekSelectionButtons" style="display: none; padding: 10px 15px; margin-bottom: 15px; background-color: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 4px;">
+                <strong>Select a week to see details:</strong>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 10px;">
+                    <div id="weekButtonsContainer"></div>
+                    <button onclick="clearFilters()" class="btn btn-sm btn-secondary" style="margin-left: 15px; flex-shrink: 0;">Clear Filters</button>
+                </div>
+            </div>
+            
+            <!-- Production Line Charts Section -->
+            <div class="chart-section" id="automationCharts">
+            <!-- Chart: Weekly Savings Trend (Bar Chart) -->
+            <div class="chart-container full-width">
+                <div class="chart-title">Weekly Savings Trend by Production Line <span style="font-size: 12px; color: #999;">(Clique numa barra para filtrar)</span></div>
+                <div id="filterInfoSavings" class="filter-info"></div>
+                <div id="chartDailySavings" class="chart-area"></div>
+            </div>
+            
+            <!-- Chart: Weekly Number of Tickets -->
+            <div class="chart-container full-width">
+                <div class="chart-title">Weekly Number of Tickets by Production Line</div>
+                <div id="filterInfoTickets" class="filter-info"></div>
+                <div id="chartDailyTickets" class="chart-area"></div>
+            </div>
+            
+            <!-- Chart: Weekly Hours Spent -->
+            <div class="chart-container full-width">
+                <div class="chart-title">Number of Hours Spent Weekly by Production Line</div>
+                <div id="filterInfoHours" class="filter-info"></div>
+                <div id="chartDailyHours" class="chart-area"></div>
+            </div>
+            
+            <!-- Chart: Ticket Status Evolution -->
+            <div class="chart-container full-width">
+                <div class="chart-title">Ticket Status Evolution Trend (Weekly)</div>
+                <div id="filterInfoStatusEvolution" class="filter-info"></div>
+                <div id="chartStatusEvolution" class="chart-area"></div>
+            </div>
+            
+            <!-- Chart 1: Tickets by Production Line -->
+            <div class="chart-container">
+                <div class="chart-title">Number of Tickets by Production Line</div>
+                <div id="chartLineTickets" class="chart-area"></div>
+            </div>
+            
+            <!-- Chart 2: Time Spent by Production Line -->
+            <div class="chart-container">
+                <div class="chart-title">Total Time Spent by Production Line</div>
+                <div id="chartLineTime" class="chart-area"></div>
+            </div>
+            
+            <!-- Chart 3: Savings by Production Line -->
+            <div class="chart-container">
+                <div class="chart-title">Cost Savings by Production Line</div>
+                <div id="chartLineSavings" class="chart-area"></div>
+            </div>
+            
+            <!-- Chart 4: Average Savings per Ticket by Line -->
+            <div class="chart-container">
+                <div class="chart-title">Average Savings per Ticket by Production Line</div>
+                <div id="chartLineAvgSavings" class="chart-area"></div>
+            </div>
+        </div>
+        </div> <!-- End of automationSection -->
+        
+        <!-- Projects Section Title -->
+        <div class="section-header" id="softwareSection" style="display: none;">
+            <h2>Software Analytics</h2>
+        </div>
+        
+        <!-- Projects Charts Section -->
+        <div class="chart-section" id="softwareCharts" style="display: none;">
+            <!-- Chart 1: Time Spent per Project (FULL WIDTH) -->
+            <div class="chart-container full-width">
+                <div class="chart-title">Time Spent per Project <span style="font-size: 12px; color: #999;">(Click a bar to see tasks)</span></div>
+                <div id="chartTimePerProject" class="chart-area"></div>
+                <div id="timePerProjectDetailsTable" style="display: none; margin-top: 20px;"></div>
+            </div>
+            
+            <!-- Chart 3: Projects per User -->
+            <div class="chart-container full-width">
+                <div class="chart-title">
+                    Number of Projects per User 
+                    <span style="font-size: 12px; color: #999;">(Clique num utilizador para ver detalhes)</span>
+                </div>
+                <div id="filterInfoProjectsPerUser" class="filter-info"></div>
+                <div id="chartProjectsPerUser" class="chart-area">
+        </div>
+                <div id="projectsPerUserDetailsTable" style="display: none; margin-top: 20px;"></div>
+            </div>
+            
+            <!-- Chart 4: Planned vs Unplanned Tasks by User -->
+            <div class="chart-container full-width">
+                <div class="chart-title">Planned vs Unplanned Tasks by User <span style="font-size: 12px; color: #999;">(Clique num utilizador para ver detalhes)</span></div>
+                <div id="filterInfoPlannedTasks" class="filter-info"></div>
+                <div id="chartPlannedTasksByUser" class="chart-area"></div>
+                <div id="plannedTasksDetailsTable" style="display: none; margin-top: 20px;"></div>
+            </div>
+        </div>
+        
+        <!-- Loading indicator -->
+        <div id="loadingIndicator" class="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Loading analytics data...</p>
+        </div>
+        
+        <!-- Error message -->
+        <div id="errorMessage" style="display: none; background-color: #ffe6e6; color: #c33; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <strong>⚠️ Error:</strong> <span id="errorText"></span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="static/vendor/jquery/jquery.min.js"></script>
+    <script src="static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="static/js/sb-admin-2.min.js"></script>
+    
+    <script>
+        // Set default date range (last 30 days)
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+        
+        document.getElementById('endDate').valueAsDate = today;
+        document.getElementById('startDate').valueAsDate = thirtyDaysAgo;
+        
+        let analyticsData = {};
+        
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setMainCategory('automation'); // Initialize with automation category and show responsible filter
+            loadProductionLines();
+            loadAnalyticsData();
+            updateChartVisibility();
+        });
+        
+        function showLoading(show = true) {
+            document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+        }
+        
+        function showError(message) {
+            document.getElementById('errorMessage').style.display = 'block';
+            document.getElementById('errorText').textContent = message;
+        }
+        
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+        
+        function waitForHighcharts(callback, timeout = 5000) {
+            const startTime = Date.now();
+            const checkInterval = setInterval(() => {
+                if (typeof Highcharts !== 'undefined') {
+                    clearInterval(checkInterval);
+                    callback();
+                } else if (Date.now() - startTime > timeout) {
+                    clearInterval(checkInterval);
+                }
+            }, 100);
+        }
+        
+        function getSelectedTicketTypes() {
+            const select = document.getElementById('ticketTypes');
+            return select.value;
+        }
+        
+        function getSelectedCategory() {
+            // Use the main category from the top button selection
+            return mainCategory;
+        }
+        
+        function getSelectedProdLine() {
+            const select = document.getElementById('prodLine');
+            return select.value;
+        }
+        
+        function updateChartVisibility() {
+            const category = getSelectedCategory();
+            const automationCharts = document.getElementById('automationCharts');
+            const softwareSection = document.getElementById('softwareSection');
+            const softwareCharts = document.getElementById('softwareCharts');
+            
+            if (category === 'automation') {
+                if (automationCharts) automationCharts.style.display = 'grid';
+                if (softwareSection) softwareSection.style.display = 'none';
+                if (softwareCharts) softwareCharts.style.display = 'none';
+            } else if (category === 'software') {
+                if (automationCharts) automationCharts.style.display = 'none';
+                if (softwareSection) softwareSection.style.display = 'block';
+                if (softwareCharts) softwareCharts.style.display = 'grid';
+            } else {
+                // Show all
+                if (automationCharts) automationCharts.style.display = 'grid';
+                if (softwareSection) softwareSection.style.display = 'block';
+                if (softwareCharts) softwareCharts.style.display = 'grid';
+            }
+        }
+        
+        function loadProductionLines() {
+            fetch('/api/analytics/production-lines')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('prodLine');
+                    const currentValue = select.value;
+                    
+                    // Clear existing options except first one
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+                    
+                    // Add production lines
+                    if (data.production_lines && data.production_lines.length > 0) {
+                        data.production_lines.forEach(line => {
+                            const option = document.createElement('option');
+                            option.value = line;
+                            option.textContent = line;
+                            select.appendChild(option);
+                        });
+                    }
+                    
+                    // Restore previous selection if it still exists
+                    select.value = currentValue;
+                })
+                .catch(error => {
+                });
+        }
+        
+        function loadAutomationResponsibles() {
+            fetch('/api/analytics/automation-responsibles')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('automationResponsible');
+                    const currentValue = select.value;
+                    
+                    // Clear existing options except first one
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+                    
+                    // Add responsibles
+                    if (data.responsibles && data.responsibles.length > 0) {
+                        data.responsibles.forEach(responsible => {
+                            const option = document.createElement('option');
+                            option.value = responsible;
+                            option.textContent = responsible;
+                            select.appendChild(option);
+                        });
+                    }
+                    
+                    // Restore previous selection if it still exists
+                    select.value = currentValue;
+                })
+                .catch(error => {
+                });
+        }
+        
+        function loadAnalyticsData() {
+            showLoading(true);
+            hideError();
+            
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const ticketTypes = getSelectedTicketTypes();
+            const category = getSelectedCategory();
+            const prodLine = getSelectedProdLine();
+            const responsible = document.getElementById('automationResponsible').value || '';
+            
+            const params = new URLSearchParams({
+                start_date: startDate,
+                end_date: endDate,
+                ticket_types: ticketTypes,
+                category: category,
+                prod_line: prodLine,
+                responsible: responsible
+            });
+            
+            const url = `/api/analytics/data?${params}`;
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    analyticsData = data;
+                    renderCharts(data);
+                    updateChartVisibility();
+                    showLoading(false);
+                })
+                .catch(error => {
+                    showError('Failed to load analytics data. Please try again.');
+                    showLoading(false);
+                });
+        }
+        
+        // Function to get ISO week number - GLOBAL
+        function getISOWeek(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+        
+        // Helper function to get week number from weekKey (YYYY-MM-DD format)
+        function getWeekNumberFromKey(weekKey) {
+            // Parse the date without timezone conversion
+            const [year, month, day] = weekKey.split('-');
+            const date = new Date(year, parseInt(month) - 1, day);
+            return getISOWeek(date);
+        }
+        
+        // Helper function to group data by week
+        function groupByWeek(data, dateField, valueField) {
+            const weekMap = {};
+            const weekOrder = [];
+            
+            data.forEach(item => {
+                const date = new Date(item[dateField]);
+                const weekStart = new Date(date);
+                weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+                
+                // Use local date for weekKey (YYYY-MM-DD format)
+                const year = weekStart.getFullYear();
+                const month = String(weekStart.getMonth() + 1).padStart(2, '0');
+                const day = String(weekStart.getDate()).padStart(2, '0');
+                const weekKey = `${year}-${month}-${day}`;
+                
+                const isoWeek = getISOWeek(weekStart);
+                const weekLabel = `Week ${isoWeek}, ${year}`;
+                
+                if (!weekMap[weekKey]) {
+                    weekMap[weekKey] = {
+                        label: weekLabel,
+                        startDate: new Date(weekStart), // Store actual date for sorting
+                        data: {}
+                    };
+                    weekOrder.push(weekKey);
+                }
+                
+                const line = item.prod_line || 'Unknown';
+                if (!weekMap[weekKey].data[line]) {
+                    weekMap[weekKey].data[line] = 0;
+                }
+                weekMap[weekKey].data[line] += (item[valueField] || 0);
+            });
+            
+            // Sort weekOrder by actual date, not just string comparison
+            weekOrder.sort((a, b) => weekMap[a].startDate - weekMap[b].startDate);
+            
+            return { weekMap, weekOrder };
+        }
+        
+        // State management for drill-down
+        let allLineAnalyticsData = null;
+        let selectedProductionLine = null;
+        let selectedWeek = null;
+        let productionLineColors = {}; // Store colors for each production line
+        let mainCategory = 'automation'; // Track main category selection
+        
+        function setMainCategory(category) {
+            mainCategory = category;
+            
+            // Update button states
+            const btnAutomation = document.getElementById('btnAutomation');
+            const btnSoftware = document.getElementById('btnSoftware');
+            
+            if (btnAutomation) {
+                btnAutomation.classList.toggle('active', category === 'automation');
+            }
+            if (btnSoftware) {
+                btnSoftware.classList.toggle('active', category === 'software');
+            }
+            
+            // Show/hide sections based on category
+            const automationSection = document.getElementById('automationSection');
+            const softwareSection = document.getElementById('softwareSection');
+            const automationResponsibleFilter = document.getElementById('automationResponsibleFilter');
+            
+            if (automationSection) {
+                automationSection.style.display = (category === 'automation') ? 'block' : 'none';
+            }
+            if (softwareSection) {
+                softwareSection.style.display = (category === 'software') ? 'block' : 'none';
+            }
+            
+            // Show/hide responsible filter based on category
+            if (automationResponsibleFilter) {
+                automationResponsibleFilter.style.display = (category === 'automation') ? 'block' : 'none';
+            }
+            
+            // Load responsibles if automation is selected
+            if (category === 'automation') {
+                loadAutomationResponsibles();
+            }
+        }
+        
+        function renderCharts(data) {
+            
+            // Wait for Highcharts to be available before rendering
+            waitForHighcharts(() => {
+                // Normalize prod_line in all arrays (trim whitespace + empty → 'Unknown')
+                ['daily_savings','daily_tickets','daily_hours'].forEach(key => {
+                    const arr = data?.line_analytics?.[key];
+                    if (!Array.isArray(arr)) return;
+                    arr.forEach(it => {
+                        if (!it) return;
+                        let v = (it.prod_line || 'Unknown').toString();
+                        v = v.trim();
+                        if (v === '') v = 'Unknown';
+                        it.prod_line = v;
+                    });
+                });
+                
+                allLineAnalyticsData = data.line_analytics;
+                selectedProductionLine = null;
+                selectedWeek = null;
+                
+                // Pre-calculate colors for all production lines
+                const allLines = new Set();
+                if (data.line_analytics && data.line_analytics.daily_savings) {
+                    data.line_analytics.daily_savings.forEach(item => allLines.add(item.prod_line));
+                }
+                if (data.line_analytics && data.line_analytics.daily_tickets) {
+                    data.line_analytics.daily_tickets.forEach(item => allLines.add(item.prod_line));
+                }
+                if (data.line_analytics && data.line_analytics.daily_hours) {
+                    data.line_analytics.daily_hours.forEach(item => allLines.add(item.prod_line));
+                }
+                
+                const colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c', '#9b59b6', '#1abc9c', '#34495e', '#d35400', '#16a085', '#c0392b', '#8e44ad', '#2980b9', '#27ae60', '#e67e22', '#95a5a6', '#7f8c8d', '#3498db', '#2ecc71', '#f39c12'];
+                Array.from(allLines).sort().forEach((line, idx) => {
+                    productionLineColors[line] = colors[idx % colors.length];
+                });
+                
+                // Render automation charts
+                if (data.line_analytics) {
+                    updateChartsDisplay();
+                }
+                
+                // Render software charts (always, they show/hide based on category)
+                const category = getSelectedCategory();
+                renderSoftwareCharts(data);
+            });
+        }
+        
+        function updateFilterInfo() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const ticketType = document.getElementById('ticketTypes').value;
+            const prodLine = document.getElementById('prodLine').value;
+            
+            let filterText = '';
+            const filters = [];
+            
+            // Add date filters
+            if (startDate) {
+                const startDateFormatted = new Date(startDate + 'T00:00:00Z').toLocaleDateString('pt-PT');
+                filters.push(`Start Date: <strong>${startDateFormatted}</strong>`);
+            }
+            if (endDate) {
+                const endDateFormatted = new Date(endDate + 'T00:00:00Z').toLocaleDateString('pt-PT');
+                filters.push(`End Date: <strong>${endDateFormatted}</strong>`);
+            }
+            
+            // Add ticket type filter
+            if (ticketType) {
+                const ticketTypeName = ticketTypeNames[ticketType] || ticketType;
+                filters.push(`Type: <strong>${ticketTypeName}</strong>`);
+            }
+            
+            // Add production line filter
+            if (prodLine) {
+                filters.push(`Line: <strong>${prodLine}</strong>`);
+            }
+            
+            // Add week/line filters
+            if (selectedProductionLine) {
+                filters.push(`Linha: <strong>${selectedProductionLine}</strong>`);
+            }
+            if (selectedWeek) {
+                const weekNumber = getWeekNumberFromKey(selectedWeek);
+                filters.push(`<strong>Week ${weekNumber}</strong>`);
+            }
+            
+            // Format text
+            if (filters.length > 0) {
+                filterText = '' + filters.join(' | ');
+            } else {
+                filterText = 'Sem filtros';
+            }
+            
+            document.getElementById('filterInfoSavings').innerHTML = filterText;
+            document.getElementById('filterInfoTickets').innerHTML = filterText;
+            document.getElementById('filterInfoHours').innerHTML = filterText;
+        }
+        
+        function updateChartsDisplay() {
+            if (!allLineAnalyticsData) return;
+            
+            // Wait for Highcharts to be available
+            waitForHighcharts(() => {
+                let displayData = allLineAnalyticsData;
+                
+                // Filter data if a production line is selected
+                if (selectedProductionLine) {
+                    displayData = {
+                        daily_savings: allLineAnalyticsData.daily_savings.filter(item => item.prod_line === selectedProductionLine),
+                        daily_tickets: allLineAnalyticsData.daily_tickets.filter(item => item.prod_line === selectedProductionLine),
+                        daily_hours: allLineAnalyticsData.daily_hours.filter(item => item.prod_line === selectedProductionLine),
+                        tickets_by_line: allLineAnalyticsData.tickets_by_line.filter(item => item.prod_line === selectedProductionLine),
+                        time_by_line: allLineAnalyticsData.time_by_line.filter(item => item.prod_line === selectedProductionLine),
+                        savings_by_line: allLineAnalyticsData.savings_by_line.filter(item => item.prod_line === selectedProductionLine),
+                        avg_savings_by_line: allLineAnalyticsData.avg_savings_by_line.filter(item => item.prod_line === selectedProductionLine)
+                    };
+                }
+                
+                // Filter data if a week is selected
+                if (selectedWeek) {
+                    displayData = {
+                        daily_savings: displayData.daily_savings.filter(item => {
+                            const date = new Date(item.date + 'T00:00:00Z');
+                            const weekStart = new Date(date);
+                            weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+                            
+                            const year = weekStart.getFullYear();
+                            const month = String(weekStart.getMonth() + 1).padStart(2, '0');
+                            const day = String(weekStart.getDate()).padStart(2, '0');
+                            const weekKey = `${year}-${month}-${day}`;
+                            
+                            return weekKey === selectedWeek;
+                        }),
+                        daily_tickets: displayData.daily_tickets.filter(item => {
+                            const date = new Date(item.date + 'T00:00:00Z');
+                            const weekStart = new Date(date);
+                            weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+                            
+                            const year = weekStart.getFullYear();
+                            const month = String(weekStart.getMonth() + 1).padStart(2, '0');
+                            const day = String(weekStart.getDate()).padStart(2, '0');
+                            const weekKey = `${year}-${month}-${day}`;
+                            
+                            return weekKey === selectedWeek;
+                        }),
+                        daily_hours: displayData.daily_hours.filter(item => {
+                            const date = new Date(item.date + 'T00:00:00Z');
+                            const weekStart = new Date(date);
+                            weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+                            
+                            const year = weekStart.getFullYear();
+                            const month = String(weekStart.getMonth() + 1).padStart(2, '0');
+                            const day = String(weekStart.getDate()).padStart(2, '0');
+                            const weekKey = `${year}-${month}-${day}`;
+                            
+                            return weekKey === selectedWeek;
+                        }),
+                        tickets_by_line: displayData.tickets_by_line,
+                        time_by_line: displayData.time_by_line,
+                        savings_by_line: displayData.savings_by_line,
+                        avg_savings_by_line: displayData.avg_savings_by_line
+                    };
+                }
+                
+                // Update UI to show selection
+                updateFilterInfo();
+                
+                // Add status_evolution if not present (for automation)
+                if (!displayData.status_evolution) {
+                    displayData.status_evolution = allLineAnalyticsData.status_evolution || [];
+                }
+                
+                renderLineAnalytics(displayData);
+            });
+        }
+        
+        function setProductionLineFilter(prodLine) {
+            selectedProductionLine = prodLine;
+            updateChartsDisplay();
+        }
+        
+        function updateWeekButtonsState() {
+            // Update the visual state of week buttons
+            const buttons = document.querySelectorAll('[data-week]');
+            buttons.forEach(button => {
+                const weekKey = button.getAttribute('data-week');
+                if (weekKey === selectedWeek) {
+                    button.classList.remove('btn-outline-primary');
+                    button.classList.add('btn-primary');
+                } else {
+                    button.classList.remove('btn-primary');
+                    button.classList.add('btn-outline-primary');
+                }
+            });
+        }
+        
+        function setWeekFilter(weekKey) {
+            selectedWeek = weekKey;
+            updateWeekButtonsState();
+            updateChartsDisplay();
+        }
+        
+        function clearFilters() {
+            selectedProductionLine = null;
+            selectedWeek = null;
+            updateWeekButtonsState();
+            updateChartsDisplay();
+        }
+        
+        // Map ticket type codes to full names
+        const ticketTypeNames = {
+            'DTAI': 'DTAI - Automation Improvement',
+            'DTAS': 'DTAS - Automation Support',
+            'DTNA': 'DTNA - New Application',
+            'DTSI': 'DTSI - Software Issue'
+        };
+        
+        function renderLineAnalytics(lineData) {
+            if (!lineData) return;
+            
+            renderDailySavingsChart(lineData.daily_savings);
+            renderDailyTicketsChart(lineData.daily_tickets);
+            renderDailyHoursChart(lineData.daily_hours);
+            renderStatusEvolutionChart(lineData.status_evolution);
+            renderLineTicketsChart(lineData.tickets_by_line);
+            renderLineTimeChart(lineData.time_by_line);
+            renderLineSavingsChart(lineData.savings_by_line);
+            renderLineAvgSavingsChart(lineData.avg_savings_by_line);
+        }
+        
+        function renderDailySavingsChart(dailySavings) {
+            if (!dailySavings || dailySavings.length === 0) {
+                document.getElementById('chartDailySavings').innerHTML = '<p style="padding: 40px; text-align: center; color: #999;">No data available</p>';
+                return;
+            }
+            
+            // Group data by week
+            const { weekMap, weekOrder } = groupByWeek(dailySavings, 'date', 'savings');
+            
+            // Get all unique production lines
+            const lineSet = new Set();
+            weekOrder.forEach(week => {
+                Object.keys(weekMap[week].data).forEach(line => lineSet.add(line));
+            });
+            let lines = Array.from(lineSet);
+            
+            // Sort lines by total savings (Pareto order - maior para menor)
+            const lineTotals = {};
+            weekOrder.forEach(week => {
+                Object.keys(weekMap[week].data).forEach(line => {
+                    if (!lineTotals[line]) lineTotals[line] = 0;
+                    lineTotals[line] += weekMap[week].data[line] || 0;
+                });
+            });
+            lines.sort((a, b) => lineTotals[b] - lineTotals[a]);
+            
+            // Keep weeks in chronological order
+            const sortedWeekOrder = [...weekOrder];
+            const weekLabels = sortedWeekOrder.map(week => weekMap[week].label);
+            
+            // Create week selection buttons
+            const weekButtonsHTML = sortedWeekOrder.map(weekKey => 
+                `<button class="btn btn-sm btn-outline-primary me-2 mb-2" data-week="${weekKey}" onclick="setWeekFilter('${weekKey}')" style="margin-bottom: 5px;">${weekMap[weekKey].label}</button>`
+            ).join('');
+            document.getElementById('weekButtonsContainer').innerHTML = weekButtonsHTML;
+            document.getElementById('weekSelectionButtons').style.display = 'block';
+            updateWeekButtonsState();
+            
+            // Use pre-calculated colors for each production line
+            const series = lines.map((line, idx) => {
+                return {
+                    name: line,
+                    data: sortedWeekOrder.map(week => {
+                        const val = weekMap[week].data[line] || 0;
+                        return val;
+                    }),
+                    color: productionLineColors[line] || '#999999'
+                };
+            });
+            
+            Highcharts.chart('chartDailySavings', {
+                chart: { 
+                    type: 'column'
+                },
+                title: null,
+                xAxis: {
+                    categories: weekLabels,
+                    title: { text: '' },
+                    labels: { rotation: -45 }
+                },
+                yAxis: {
+                    title: { text: 'Savings (€)' }
+                },
+                legend: { 
+                    enabled: true,
+                    layout: 'horizontal',
+                    align: 'center',
+                    verticalAlign: 'bottom'
+                },
+                tooltip: { 
+                    headerFormat: '<b>{point.x}</b><br/>',
+                    formatter: function() {
+                        let result = '<b>' + this.x + '</b><br/>';
+                        this.points.forEach(point => {
+                            if (point.y > 0) {
+                                result += '<span style="color:' + point.color + '">' + point.series.name + ': €' + point.y.toFixed(2) + '</span><br/>';
+                            }
+                        });
+                        return result;
+                    },
+                    shared: true,
+                    footerFormat: '<small style="color: #999;">Clique na barra para filtrar por linha</small>'
+                },
+                plotOptions: {
+                    column: {
+                        stacking: 'normal',
+                        pointPadding: 0.05,
+                        groupPadding: 0.15,
+                        borderWidth: 0,
+                        dataLabels: {
+                            enabled: true,
+                            format: '{series.name}: €{point.y:.0f}',
+                            style: {
+                                fontSize: '10px',
+                                fontWeight: 'normal'
+                            },
+                            filter: {
+                                operator: '>',
+                                property: 'y',
+                                value: 0
+                            }
+                        }
+                    }
+                },
+                series: series
+            });
+        }
+        
+        function renderDailyTicketsChart(dailyTickets) {
+            if (!dailyTickets || dailyTickets.length === 0) {
+                document.getElementById('chartDailyTickets').innerHTML = '<p style="padding: 40px; text-align: center; color: #999;">No data available</p>';
+                return;
+            }
+            
+            // Group data by week
+            const { weekMap, weekOrder } = groupByWeek(dailyTickets, 'date', 'ticket_count');
+            
+            // Get all unique production lines
+            const lineSet = new Set();
+            weekOrder.forEach(week => {
+                Object.keys(weekMap[week].data).forEach(line => lineSet.add(line));
+            });
+            let lines = Array.from(lineSet);
+            
+            // Sort lines by total tickets (Pareto order - maior para menor)
+            const lineTotals = {};
+            weekOrder.forEach(week => {
+                Object.keys(weekMap[week].data).forEach(line => {
+                    if (!lineTotals[line]) lineTotals[line] = 0;
+                    lineTotals[line] += weekMap[week].data[line] || 0;
+                });
+            });
+            lines.sort((a, b) => lineTotals[b] - lineTotals[a]);
+            
+            // Keep weeks in chronological order (não ordenar por Pareto)
+            const sortedWeekOrder = [...weekOrder];
+            
+            // Prepare series data - use pre-calculated colors
+            const series = lines.map((line, idx) => {
+                return {
+                    name: line,
+                    data: sortedWeekOrder.map(week => weekMap[week].data[line] || 0),
+                    color: productionLineColors[line] || '#999999'
+                };
+            });
+            
+            const weekLabels = sortedWeekOrder.map(week => weekMap[week].label);
+            
+            Highcharts.chart('chartDailyTickets', {
+                chart: { type: 'column' },
+                title: null,
+                xAxis: {
+                    categories: weekLabels,
+                    title: { text: '' },
+                    labels: { rotation: -45 }
+                },
+                yAxis: {
+                    title: { text: 'Number of Tickets' }
+                },
+                legend: { 
+                    enabled: true,
+                    layout: 'horizontal',
+                    align: 'center',
+                    verticalAlign: 'bottom'
+                },
+                tooltip: { 
+                    headerFormat: '<b>{point.x}</b><br/>',
+                    formatter: function() {
+                        let result = '<b>' + this.x + '</b><br/>';
+                        this.points.forEach(point => {
+                            if (point.y > 0) {
+                                result += '<span style="color:' + point.color + '">' + point.series.name + ': ' + point.y + ' tickets</span><br/>';
+                            }
+                        });
+                        return result;
+                    },
+                    shared: true
+                },
+                plotOptions: {
+                    column: {
+                        stacking: 'normal',
+                        pointPadding: 0.05,
+                        groupPadding: 0.15,
+                        borderWidth: 0,
+                        dataLabels: {
+                            enabled: true,
+                            format: '{series.name}: {point.y}',
+                            style: {
+                                fontSize: '10px',
+                                fontWeight: 'normal'
+                            },
+                            filter: {
+                                operator: '>',
+                                property: 'y',
+                                value: 0
+                            }
+                        }
+                    }
+                },
+                series: series
+            });
+        }
+        
+        function renderDailyHoursChart(dailyHours) {
+            if (!dailyHours || dailyHours.length === 0) {
+                document.getElementById('chartDailyHours').innerHTML = '<p style="padding: 40px; text-align: center; color: #999;">No data available</p>';
+                return;
+            }
+            
+            // Group data by week
+            const { weekMap, weekOrder } = groupByWeek(dailyHours, 'date', 'total_hours');
+            
+            // Get all unique production lines
+            const lineSet = new Set();
+            weekOrder.forEach(week => {
+                Object.keys(weekMap[week].data).forEach(line => lineSet.add(line));
+            });
+            let lines = Array.from(lineSet);
+            
+            // Sort lines by total hours (Pareto order - maior para menor)
+            const lineTotals = {};
+            weekOrder.forEach(week => {
+                Object.keys(weekMap[week].data).forEach(line => {
+                    if (!lineTotals[line]) lineTotals[line] = 0;
+                    lineTotals[line] += weekMap[week].data[line] || 0;
+                });
+            });
+            lines.sort((a, b) => lineTotals[b] - lineTotals[a]);
+            
+            // Keep weeks in chronological order (não ordenar por Pareto)
+            const sortedWeekOrder = [...weekOrder];
+            
+            // Prepare series data - use pre-calculated colors
+            const series = lines.map((line, idx) => {
+                return {
+                    name: line,
+                    data: sortedWeekOrder.map(week => weekMap[week].data[line] || 0),
+                    color: productionLineColors[line] || '#999999'
+                };
+            });
+            
+            const weekLabels = sortedWeekOrder.map(week => weekMap[week].label);
+            
+            Highcharts.chart('chartDailyHours', {
+                chart: { type: 'column' },
+                title: null,
+                xAxis: {
+                    categories: weekLabels,
+                    title: { text: '' },
+                    labels: { rotation: -45 }
+                },
+                yAxis: {
+                    title: { text: 'Hours' }
+                },
+                legend: { 
+                    enabled: true,
+                    layout: 'horizontal',
+                    align: 'center',
+                    verticalAlign: 'bottom'
+                },
+                tooltip: { 
+                    headerFormat: '<b>{point.x}</b><br/>',
+                    formatter: function() {
+                        let result = '<b>' + this.x + '</b><br/>';
+                        this.points.forEach(point => {
+                            if (point.y > 0) {
+                                result += '<span style="color:' + point.color + '">' + point.series.name + ': ' + point.y.toFixed(1) + ' hours</span><br/>';
+                            }
+                        });
+                        return result;
+                    },
+                    shared: true
+                },
+                plotOptions: {
+                    column: {
+                        stacking: 'normal',
+                        pointPadding: 0.05,
+                        groupPadding: 0.15,
+                        borderWidth: 0,
+                        dataLabels: {
+                            enabled: true,
+                            format: '{series.name}: {point.y:.1f}h',
+                            style: {
+                                fontSize: '10px',
+                                fontWeight: 'normal'
+                            },
+                            filter: {
+                                operator: '>',
+                                property: 'y',
+                                value: 0
+                            }
+                        }
+                    }
+                },
+                series: series
+            });
+        }
+        
+        function renderLineTicketsChart(lineTickets) {
+            if (!lineTickets || lineTickets.length === 0) {
+                document.getElementById('chartLineTickets').innerHTML = '<p style="padding: 40px; text-align: center; color: #999;">No data available</p>';
+                return;
+            }
+            
+            // Sort by count descending for Pareto effect
+            const sorted = lineTickets.sort((a, b) => b.ticket_count - a.ticket_count);
+            
+            Highcharts.chart('chartLineTickets', {
+                chart: { type: 'column' },
+                title: null,
+                xAxis: {
+                    categories: sorted.map(l => l.prod_line || 'Unknown'),
+                    title: { text: '' }
+                },
+                yAxis: {
+                    title: { text: 'Number of Tickets' }
+                },
+                legend: { enabled: false },
+                tooltip: { valueSuffix: ' tickets' },
+                plotOptions: {
+                    column: {
+                        color: '#3498db'
+                    }
+                },
+                series: [{
+                    data: sorted.map(l => l.ticket_count)
+                }]
+            });
+        }
+        
+        function renderLineTimeChart(lineTime) {
+            if (!lineTime || lineTime.length === 0) {
+                document.getElementById('chartLineTime').innerHTML = '<p style="padding: 40px; text-align: center; color: #999;">No data available</p>';
+                return;
+            }
+            
+            // Sort by time descending for Pareto effect
+            const sorted = lineTime.sort((a, b) => b.total_hours - a.total_hours);
+            
+            Highcharts.chart('chartLineTime', {
+                chart: { type: 'column' },
+                title: null,
+                xAxis: {
+                    categories: sorted.map(l => l.prod_line || 'Unknown'),
+                    title: { text: '' }
+                },
+                yAxis: {
+                    title: { text: 'Hours' }
+                },
+                legend: { enabled: false },
+                tooltip: { valueSuffix: ' hours' },
+                plotOptions: {
+                    column: {
+                        color: '#2ecc71'
+                    }
+                },
+                series: [{
+                    data: sorted.map(l => Math.round(l.total_hours * 10) / 10)
+                }]
+            });
+        }
+        
+        function renderLineSavingsChart(lineSavings) {
+            if (!lineSavings || lineSavings.length === 0) {
+                document.getElementById('chartLineSavings').innerHTML = '<p style="padding: 40px; text-align: center; color: #999;">No data available</p>';
+                return;
+            }
+            
+            // Sort by savings descending for Pareto effect
+            const sorted = lineSavings.sort((a, b) => b.total_savings - a.total_savings);
+            
+            Highcharts.chart('chartLineSavings', {
+                chart: { type: 'column' },
+                title: null,
+                xAxis: {
+                    categories: sorted.map(l => l.prod_line || 'Unknown'),
+                    title: { text: '' }
+                },
+                yAxis: {
+                    title: { text: 'Savings (€)' }
+                },
+                legend: { enabled: false },
+                tooltip: { 
+                    headerFormat: '<b>{point.x}</b><br/>',
+                    pointFormat: 'Savings: €{point.y:,.2f}'
+                },
+                plotOptions: {
+                    column: {
+                        color: '#f39c12'
+                    }
+                },
+                series: [{
+                    data: sorted.map(l => Math.round(l.total_savings * 100) / 100)
+                }]
+            });
+        }
+        
+        function renderLineAvgSavingsChart(lineAvgSavings) {
+            if (!lineAvgSavings || lineAvgSavings.length === 0) {
+                document.getElementById('chartLineAvgSavings').innerHTML = '<p style="padding: 40px; text-align: center; color: #999;">No data available</p>';
+                return;
+            }
+            
+            // Sort by avg savings descending for Pareto effect
+            const sorted = lineAvgSavings.sort((a, b) => b.avg_savings - a.avg_savings);
+            
+            Highcharts.chart('chartLineAvgSavings', {
+                chart: { type: 'column' },
+                title: null,
+                xAxis: {
+                    categories: sorted.map(l => l.prod_line || 'Unknown'),
+                    title: { text: '' }
+                },
+                yAxis: {
+                    title: { text: 'Average Savings (€)' }
+                },
+                legend: { enabled: false },
+                tooltip: { 
+                    headerFormat: '<b>{point.x}</b><br/>',
+                    pointFormat: 'Avg Savings: €{point.y:,.2f}'
+                },
+                plotOptions: {
+                    column: {
+                        color: '#e74c3c'
+                    }
+                },
+                series: [{
+                    data: sorted.map(l => Math.round(l.avg_savings * 100) / 100)
+                }]
+            });
+        }
+        
+        function renderStatusEvolutionChart(statusEvolution) {
+            if (!statusEvolution || statusEvolution.length === 0) {
+                document.getElementById('chartStatusEvolution').innerHTML = '<p style="padding: 40px; text-align: center; color: #999;">No data available</p>';
+                return;
+            }
+            
+            // Group by week and status
+            const weekMap = {};
+            const statusCounts = {};
+            
+            statusEvolution.forEach(item => {
+                const date = new Date(item.date + 'T00:00:00Z');
+                const weekStart = new Date(date);
+                weekStart.setDate(date.getDate() - date.getDay());
+                
+                const year = weekStart.getFullYear();
+                const month = String(weekStart.getMonth() + 1).padStart(2, '0');
+                const day = String(weekStart.getDate()).padStart(2, '0');
+                const weekKey = `${year}-${month}-${day}`;
+                const isoWeek = getISOWeek(weekStart);
+                const weekLabel = `Week ${isoWeek}, ${year}`;
+                
+                if (!weekMap[weekKey]) {
+                    weekMap[weekKey] = {
+                        label: weekLabel,
+                        startDate: new Date(weekStart),
+                        completed: 0,
+                        pending: 0,
+                        in_progress: 0
+                    };
+                }
+                
+                if (item.status === 'completed') {
+                    weekMap[weekKey].completed += item.count;
+                    statusCounts.completed = true;
+                } else if (item.status === 'in_progress') {
+                    weekMap[weekKey].in_progress += item.count;
+                    statusCounts.in_progress = true;
+                } else {
+                    weekMap[weekKey].pending += item.count;
+                    statusCounts.pending = true;
+                }
+            });
+            
+            // Sort weeks
+            const weekOrder = Object.keys(weekMap).sort((a, b) => weekMap[a].startDate - weekMap[b].startDate);
+            const weekLabels = weekOrder.map(w => weekMap[w].label);
+            
+            const series = [];
+            const colors = ['#2ecc71', '#f39c12', '#3498db'];
+            const statusNames = ['completed', 'pending', 'in_progress'];
+            const statusLabels = ['Completed', 'Pending', 'In Progress'];
+            
+            statusNames.forEach((status, idx) => {
+                if (statusCounts[status]) {
+                    series.push({
+                        name: statusLabels[idx],
+                        data: weekOrder.map(w => weekMap[w][status] || 0),
+                        color: colors[idx]
+                    });
+                }
+            });
+            
+            Highcharts.chart('chartStatusEvolution', {
+                chart: { type: 'line' },
+                title: null,
+                xAxis: {
+                    categories: weekLabels,
+                    title: { text: '' },
+                    labels: { rotation: -45 }
+                },
+                yAxis: {
+                    title: { text: 'Number of Tickets' }
+                },
+                legend: { 
+                    enabled: true,
+                    layout: 'horizontal',
+                    align: 'center',
+                    verticalAlign: 'bottom'
+                },
+                tooltip: { 
+                    shared: true,
+                    valueSuffix: ' tickets'
+                },
+                plotOptions: {
+                    line: {
+                        dataLabels: { enabled: false },
+                        enableMouseTracking: true
+                    }
+                },
+                series: series
+            });
+        }
+        
+        function renderSoftwareCharts(data) {
+            // Wait for Highcharts to be available before rendering
+            waitForHighcharts(() => {
+                // Only show software section if software category is selected
+                const category = getSelectedCategory();
+                const softwareSection = document.getElementById('softwareSection');
+                const softwareCharts = document.getElementById('softwareCharts');
+                
+                if (category === 'software') {
+                    if (softwareSection) softwareSection.style.display = 'block';
+                    if (softwareCharts) softwareCharts.style.display = 'grid';
+                } else {
+                    if (softwareSection) softwareSection.style.display = 'none';
+                    if (softwareCharts) softwareCharts.style.display = 'none';
+                    return; // Don't render charts if not software category
+                }
+                
+                // Render time per project
+                if (data && data.projects && data.projects.time_per_project) {
+                    renderTimePerProjectChart(data.projects.time_per_project);
+                }
+                
+                // Render software analytics
+                if (data && data.software_analytics) {
+                    if (data.software_analytics.projects_with_tasks) {
+                        renderProjectsWithTasks(data.software_analytics.projects_with_tasks);
+                    }
+                    if (data.software_analytics.planned_tasks_by_user) {
+                        renderPlannedTasksByUser(data.software_analytics.planned_tasks_by_user);
+                    }
+                }
+            });
+        }
+        
+        function renderProjectsWithTasks(projectsWithTasks) {
+            if (!projectsWithTasks || projectsWithTasks.length === 0) {
+                document.getElementById('chartProjectsPerUser').innerHTML = '<p style="padding: 40px; text-align: center; color: #999;">No data available</p>';
+                return;
+            }
+            
+            // Filter out projects that are on hold, cancelled, or standby
+            projectsWithTasks = projectsWithTasks.filter(project => project.status !== 'on hold' && project.status !== 'cancelled' && project.status !== 'standby');
+            
+            // Group by user (data already aggregated by user from backend)
+            const userStats = {};
+            projectsWithTasks.forEach(item => {
+                const user = item.created_by || 'Unassigned';
+                userStats[user] = {
+                    completed_tasks: item.completed_tasks,
+                    in_progress_tasks: item.in_progress_tasks,
+                    not_started_tasks: item.not_started_tasks,
+                    overdue_tasks: item.overdue_tasks
+                };
+            });
+            
+            const users = Object.keys(userStats).sort();
+            
+            // Create series for each task status
+            const completedData = users.map(user => userStats[user].completed_tasks);
+            const inProgressData = users.map(user => userStats[user].in_progress_tasks);
+            const notStartedData = users.map(user => userStats[user].not_started_tasks);
+            const overdueData = users.map(user => userStats[user].overdue_tasks);
+            
+            Highcharts.chart('chartProjectsPerUser', {
+                chart: { type: 'column' },
+                title: null,
+                xAxis: {
+                    categories: users,
+                    title: { text: '' }
+                },
+                yAxis: {
+                    title: { text: 'Number of Tasks' }
+                },
+                legend: { enabled: true },
+                tooltip: { valueSuffix: ' tasks', shared: true },
+                plotOptions: {
+                    column: {
+                        stacking: 'normal'
+                    },
+                    series: {
+                        events: {
+                            click: function(event) {
+                                const selectedUser = users[event.point.x];
+                                showProjectsPerUserDetails(selectedUser);
+                            }
+                        }
+                    }
+                },
+                series: [
+                    { name: 'Completed', data: completedData, color: '#2ecc71' },
+                    { name: 'In Progress', data: inProgressData, color: '#3498db' },
+                    { name: 'Not Started', data: notStartedData, color: '#e74c3c' },
+                    { name: 'Overdue', data: overdueData, color: '#9b59b6' }
+                ]
+            });
+        }
+        
+        function renderPlannedTasksByUser(plannedTasks) {
+            if (!plannedTasks || plannedTasks.length === 0) {
+                document.getElementById('chartPlannedTasksByUser').innerHTML = '<p style="padding: 40px; text-align: center; color: #999;">No data available</p>';
+                return;
+            }
+            
+            // Group by user and classification (Planned/Unplanned)
+            const userMap = {};
+            
+            plannedTasks.forEach(item => {
+                const user = item.responsible || 'Unassigned';
+                const classification = item.classification || 'Unplanned';
+                
+                if (!userMap[user]) userMap[user] = { 'Planned': 0, 'Unplanned': 0 };
+                userMap[user][classification] = (userMap[user][classification] || 0) + item.count;
+            });
+            
+            const users = Object.keys(userMap).sort();
+            
+            const series = [
+                {
+                    name: 'Planned',
+                    data: users.map(user => userMap[user]['Planned'] || 0),
+                    color: '#2ecc71'
+                },
+                {
+                    name: 'Unplanned',
+                    data: users.map(user => userMap[user]['Unplanned'] || 0),
+                    color: '#8B6F47'
+                }
+            ];
+            
+            Highcharts.chart('chartPlannedTasksByUser', {
+                chart: { type: 'column' },
+                title: null,
+                xAxis: {
+                    categories: users,
+                    title: { text: '' }
+                },
+                yAxis: {
+                    title: { text: 'Number of Tasks' }
+                },
+                legend: { enabled: true },
+                tooltip: { valueSuffix: ' tasks', shared: true },
+                plotOptions: {
+                    column: {
+                        stacking: 'normal'
+                    },
+                    series: {
+                        events: {
+                            click: function(event) {
+                                const selectedUser = users[event.point.x];
+                                showPlannedTasksDetails(selectedUser);
+                            }
+                        }
+                    }
+                },
+                series: series
+            });
+        }
+        
+        function showProjectsPerUserDetails(user) {
+            const detailsDiv = document.getElementById('projectsPerUserDetailsTable');
+
+            // Get date filters
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            // Build query string with filters
+            const params = new URLSearchParams({
+                start_date: startDate,
+                end_date: endDate
+            });
+
+            // Fetch all tasks from API
+            params.set('username', user);
+            fetch(`/api/analytics/user-pending-tasks?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success || !data.tasks || data.tasks.length === 0) {
+                        detailsDiv.innerHTML = '<p style="padding: 20px; background: white; border-radius: 8px; text-align: center; color: #999;">No tasks found for this user.</p>';
+                        detailsDiv.style.display = 'block';
+                        return;
+                    }
+
+                    const { not_started, overdue, completed, in_progress, total } = data.summary;
+
+                    // Calculate total time
+                    let totalTime = 0;
+                    data.tasks.forEach(task => { totalTime += (task.estimated_hours || 0); });
+
+                    let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h4>Tasks for ${user}</h4>
+                        <div style="margin-bottom: 15px; padding: 12px; background: #f8f9fa; border-radius: 6px; display: flex; gap: 20px; flex-wrap: wrap;">
+                            <div><span style="font-weight: bold; color: #2ecc71;">Completed:</span> ${completed || 0}</div>
+                            <div><span style="font-weight: bold; color: #3498db;">In Progress:</span> ${in_progress || 0}</div>
+                            <div><span style="font-weight: bold; color: #e74c3c;">Not Started:</span> ${not_started}</div>
+                            <div><span style="font-weight: bold; color: #9b59b6;">Overdue:</span> ${overdue}</div>
+                            <div><span style="font-weight: bold; color: #2c3e50;">Total:</span> ${total}</div>
+                        </div>
+                        <table class="responsive-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead style="background-color: #f8f9fa;">
+                                <tr>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Project</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Description</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Status</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Category</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Priority</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Week</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Time (h)</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Due Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+                    const categoryColors = {
+                        'Completed': '#2ecc71',
+                        'In Progress': '#3498db',
+                        'Overdue': '#9b59b6',
+                        'Not Started': '#e74c3c',
+                        'Pending': '#f39c12'
+                    };
+
+                    const statusColors = {
+                        'Done': '#2ecc71',
+                        'In Progress': '#3498db',
+                        'To Do': '#e74c3c',
+                        'To do': '#e74c3c',
+                        'On Hold': '#f39c12',
+                        'Cancelled': '#95a5a6'
+                    };
+
+                    data.tasks.forEach(task => {
+                        const categoryColor = categoryColors[task.category] || '#95a5a6';
+                        const statusColor = statusColors[task.status] || '#3498db';
+                        const priorityColor = task.priority === 'High' ? '#e74c3c' : task.priority === 'Medium' ? '#f39c12' : '#2ecc71';
+
+                        html += `<tr style="border-bottom: 1px solid #ecf0f1;">
+                            <td style="padding: 10px; font-weight: bold; color: #3498db;">${task.project_name || '-'}</td>
+                            <td style="padding: 10px; max-width: 300px; word-break: break-word;">${task.description || '-'}</td>
+                            <td style="padding: 10px;"><span style="background-color: ${statusColor}; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px;">${task.status || 'Unknown'}</span></td>
+                            <td style="padding: 10px;"><span style="background-color: ${categoryColor}; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; font-weight: bold;">${task.category}</span></td>
+                            <td style="padding: 10px;"><span style="background-color: ${priorityColor}; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px;">${task.priority || '-'}</span></td>
+                            <td style="padding: 10px;">${task.week_number || '-'}</td>
+                            <td style="padding: 10px;">${task.estimated_hours ? task.estimated_hours.toFixed(1) : '0.0'}</td>
+                            <td style="padding: 10px; color: #666;">${task.planned_end_date || '-'}</td>
+                        </tr>`;
+                    });
+
+                    html += `<tr style="border-top: 2px solid #2c3e50; font-weight: bold; background-color: #f8f9fa;">
+                            <td style="padding: 10px;" colspan="6">Total</td>
+                            <td style="padding: 10px;">${totalTime.toFixed(1)}</td>
+                            <td style="padding: 10px;"></td>
+                        </tr>`;
+
+                    html += `</tbody></table></div>`;
+                    detailsDiv.innerHTML = html;
+                    detailsDiv.style.display = 'block';
+                })
+                .catch(error => {
+                    detailsDiv.innerHTML = '<p style="color: red;">Error loading tasks</p>';
+                    detailsDiv.style.display = 'block';
+                });
+        }
+        
+        function showPlannedTasksDetails(user) {
+            const detailsDiv = document.getElementById('plannedTasksDetailsTable');
+            
+            // Get date filters
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // Build query string with filters
+            const params = new URLSearchParams({
+                start_date: startDate,
+                end_date: endDate
+            });
+            
+            // Fetch actual tasks from API
+            params.set('username', user);
+            fetch(`/api/analytics/planned-tasks?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success || !data.tasks || data.tasks.length === 0) {
+                        detailsDiv.innerHTML = '<p style="padding: 20px; background: white; border-radius: 8px; text-align: center; color: #999;">No tasks found for this user.</p>';
+                        detailsDiv.style.display = 'block';
+                        return;
+                    }
+
+                    const statusColors = {
+                        'Done': '#2ecc71',
+                        'In Progress': '#3498db',
+                        'To Do': '#e74c3c',
+                        'To do': '#e74c3c',
+                        'On Hold': '#f39c12',
+                        'Cancelled': '#95a5a6'
+                    };
+
+                    let totalTime = 0;
+                    data.tasks.forEach(t => { totalTime += (t.estimated_hours || 0); });
+
+                    let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h4>Tasks for ${user} (${data.tasks.length} total) | Total Time: ${totalTime.toFixed(1)}h</h4>
+                        <table class="responsive-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead style="background-color: #f8f9fa;">
+                                <tr>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Classification</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Description</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Status</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Priority</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Week</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Time (h)</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Due Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+                    data.tasks.forEach(task => {
+                        const classification = task.task_classification || 'Unknown';
+                        const statusColor = statusColors[task.status] || '#9b59b6';
+                        const priorityColor = task.priority === 'High' ? '#e74c3c' : task.priority === 'Medium' ? '#f39c12' : '#2ecc71';
+
+                        html += `<tr style="border-bottom: 1px solid #ecf0f1;">
+                            <td style="padding: 10px; font-weight: bold;">${classification}</td>
+                            <td style="padding: 10px; max-width: 300px; word-break: break-word;">${task.description || '-'}</td>
+                            <td style="padding: 10px;"><span style="background-color: ${statusColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">${task.status}</span></td>
+                            <td style="padding: 10px;"><span style="background-color: ${priorityColor}; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px;">${task.priority || '-'}</span></td>
+                            <td style="padding: 10px;">${task.week_number || '-'}</td>
+                            <td style="padding: 10px;">${task.estimated_hours ? task.estimated_hours.toFixed(1) : '0.0'}</td>
+                            <td style="padding: 10px; color: #666;">${task.planned_end_date || '-'}</td>
+                        </tr>`;
+                    });
+
+                    html += `<tr style="border-top: 2px solid #2c3e50; font-weight: bold; background-color: #f8f9fa;">
+                            <td style="padding: 10px;" colspan="5">Total</td>
+                            <td style="padding: 10px;">${totalTime.toFixed(1)}</td>
+                            <td style="padding: 10px;"></td>
+                        </tr>`;
+
+                    html += `</tbody></table></div>`;
+                    detailsDiv.innerHTML = html;
+                    detailsDiv.style.display = 'block';
+                })
+                .catch(error => {
+                    detailsDiv.innerHTML = '<p style="color: red;">Error loading tasks</p>';
+                    detailsDiv.style.display = 'block';
+                });
+        }
+        
+        function renderProjectsCharts(projects) {
+            if (!projects) return;
+            renderTimePerProjectChart(projects.time_per_project);
+            // Don't render other project charts - they were removed from software section
+        }
+        
+        function renderTimePerProjectChart(timePerProject) {
+            if (!timePerProject || !Array.isArray(timePerProject) || timePerProject.length === 0) {
+                document.getElementById('chartTimePerProject').innerHTML = '<p style="padding: 40px; text-align: center; color: #999;">No data available</p>';
+                return;
+            }
+
+            // Store project data for click handler
+            const projectData = timePerProject;
+
+            Highcharts.chart('chartTimePerProject', {
+                chart: { type: 'bar' },
+                title: null,
+                xAxis: {
+                    categories: timePerProject.map(p => p.project_name || 'Unknown'),
+                    title: { text: '' }
+                },
+                yAxis: {
+                    title: { text: 'Hours' }
+                },
+                legend: { enabled: false },
+                tooltip: { valueSuffix: ' hours' },
+                plotOptions: {
+                    bar: {
+                        color: '#3498db',
+                        cursor: 'pointer'
+                    },
+                    series: {
+                        events: {
+                            click: function(event) {
+                                const idx = event.point.x;
+                                const project = projectData[idx];
+                                if (project && project.project_id) {
+                                    showProjectTasksDetails(project.project_id, project.project_name);
+                                }
+                            }
+                        }
+                    }
+                },
+                series: [{
+                    data: timePerProject.map(p => parseFloat(p.total_hours) || 0)
+                }]
+            });
+        }
+
+        function showProjectTasksDetails(projectId, projectName) {
+            const detailsDiv = document.getElementById('timePerProjectDetailsTable');
+
+            fetch(`/api/analytics/project-tasks/${projectId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success || !data.tasks || data.tasks.length === 0) {
+                        detailsDiv.innerHTML = '<p style="padding: 20px; background: white; border-radius: 8px; text-align: center; color: #999;">No tasks found for this project.</p>';
+                        detailsDiv.style.display = 'block';
+                        return;
+                    }
+
+                    const statusColors = {
+                        'Done': '#2ecc71',
+                        'In Progress': '#3498db',
+                        'To Do': '#e74c3c',
+                        'To do': '#e74c3c',
+                        'On Hold': '#f39c12',
+                        'Cancelled': '#95a5a6'
+                    };
+
+                    let totalTime = 0;
+                    data.tasks.forEach(t => { totalTime += (t.estimated_hours || 0); });
+
+                    let html = `<div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                        <h4>${projectName} - Tasks (${data.total} total) | Total Time: ${totalTime.toFixed(1)}h</h4>
+                        <table class="responsive-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                            <thead style="background-color: #f8f9fa;">
+                                <tr>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Title</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Responsible</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Status</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Priority</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Week</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Time (h)</th>
+                                    <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Due Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+
+                    data.tasks.forEach(task => {
+                        const statusColor = statusColors[task.status] || '#9b59b6';
+                        const priorityColor = task.priority === 'High' ? '#e74c3c' : task.priority === 'Medium' ? '#f39c12' : '#2ecc71';
+
+                        html += `<tr style="border-bottom: 1px solid #ecf0f1;">
+                            <td style="padding: 10px; max-width: 300px; word-break: break-word;">${task.title || task.description || '-'}</td>
+                            <td style="padding: 10px;">${task.responsible || '-'}</td>
+                            <td style="padding: 10px;"><span style="background-color: ${statusColor}; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px;">${task.status || 'Unknown'}</span></td>
+                            <td style="padding: 10px;"><span style="background-color: ${priorityColor}; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px;">${task.priority || '-'}</span></td>
+                            <td style="padding: 10px;">${task.week_number || '-'}</td>
+                            <td style="padding: 10px;">${task.estimated_hours ? task.estimated_hours.toFixed(1) : '0.0'}</td>
+                            <td style="padding: 10px; color: #666;">${task.planned_end_date || '-'}</td>
+                        </tr>`;
+                    });
+
+                    html += `<tr style="border-top: 2px solid #2c3e50; font-weight: bold; background-color: #f8f9fa;">
+                            <td style="padding: 10px;" colspan="5">Total</td>
+                            <td style="padding: 10px;">${totalTime.toFixed(1)}</td>
+                            <td style="padding: 10px;"></td>
+                        </tr>`;
+
+                    html += `</tbody></table></div>`;
+                    detailsDiv.innerHTML = html;
+                    detailsDiv.style.display = 'block';
+                })
+                .catch(error => {
+                    detailsDiv.innerHTML = '<p style="color: red;">Error loading tasks</p>';
+                    detailsDiv.style.display = 'block';
+                });
+        }
+        
+        function renderTasksPerProjectChart(tasksPerProject) {
+            if (!tasksPerProject || !Array.isArray(tasksPerProject) || tasksPerProject.length === 0) {
+                return;
+            }
+            
+            Highcharts.chart('chartTasksPerProject', {
+                chart: { type: 'column' },
+                title: null,
+                xAxis: {
+                    categories: tasksPerProject.map(p => p.project_name || 'Unknown'),
+                    title: { text: '' }
+                },
+                yAxis: {
+                    title: { text: 'Number of Tasks' }
+                },
+                legend: { enabled: false },
+                tooltip: { valueSuffix: ' tasks' },
+                plotOptions: {
+                    column: {
+                        color: '#2ecc71'
+                    }
+                },
+                series: [{
+                    data: tasksPerProject.map(p => p.task_count || 0)
+                }]
+            });
+        }
+        
+        function renderAvgTimePerTaskChart(avgTimePerTask) {
+            if (!avgTimePerTask || !Array.isArray(avgTimePerTask) || avgTimePerTask.length === 0) {
+                return;
+            }
+            
+            Highcharts.chart('chartAvgTimePerTask', {
+                chart: { type: 'column' },
+                title: null,
+                xAxis: {
+                    categories: avgTimePerTask.map(p => p.project_name || 'Unknown'),
+                    title: { text: '' }
+                },
+                yAxis: {
+                    title: { text: 'Hours' }
+                },
+                legend: { enabled: false },
+                tooltip: { valueSuffix: ' hours' },
+                plotOptions: {
+                    column: {
+                        color: '#f39c12'
+                    }
+                },
+                series: [{
+                    data: avgTimePerTask.map(p => parseFloat(p.avg_hours) || 0)
+                }]
+            });
+        }
+        
+        function renderTasksStatusChart(tasksStatus) {
+            if (!tasksStatus || !Array.isArray(tasksStatus) || tasksStatus.length === 0) {
+                return;
+            }
+            
+            Highcharts.chart('chartTasksStatus', {
+                chart: { type: 'pie' },
+                title: null,
+                tooltip: { pointFormat: '<b>{point.name}</b>: {point.y} ({point.percentage:.1f}%)' },
+                plotOptions: {
+                    pie: {
+                        allowPointSelect: true,
+                        cursor: 'pointer',
+                        dataLabels: {
+                            enabled: true,
+                            format: '<b>{point.name}</b>: {point.y}'
+                        }
+                    }
+                },
+                series: [{
+                    data: tasksStatus.map(s => ({
+                        name: s.status_name || 'Unknown',
+                        y: s.count || 0
+                    }))
+                }]
+            });
+        }
+        
+        function renderTasksTypeChart(tasksType) {
+            if (!tasksType || !Array.isArray(tasksType) || tasksType.length === 0) {
+                return;
+            }
+            
+            const colors = ['#3498db', '#2ecc71', '#f39c12', '#e74c3c'];
+            Highcharts.chart('chartTasksType', {
+                chart: { type: 'column' },
+                title: null,
+                xAxis: {
+                    categories: tasksType.map(t => t.task_type_name || 'Unknown'),
+                    title: { text: '' }
+                },
+                yAxis: {
+                    title: { text: 'Number of Tasks' }
+                },
+                legend: { enabled: false },
+                tooltip: { valueSuffix: ' tasks' },
+                plotOptions: {
+                    column: {
+                        colorByPoint: true
+                    }
+                },
+                series: [{
+                    data: tasksType.map((t, idx) => ({
+                        y: t.count || 0,
+                        color: colors[idx % colors.length]
+                    }))
+                }]
+            });
+        }
+    </script>
+
+</body>
+
+{% endblock %}
