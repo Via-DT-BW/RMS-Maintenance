@@ -15,7 +15,6 @@ import pyodbc, random
 import os
 from dotenv import load_dotenv
 from connection import connect
-from github_service import create_issue, close_issue, get_user_github_usernames, get_project_github_repo
 
 # Carregar variáveis de ambiente do ficheiro .env (desenvolvimento)
 load_dotenv()
@@ -353,114 +352,90 @@ def index():
 @app.route('/home')
 def home():
     try:
-        username = session.get('username')  # Check username instead of name
+        username = session.get('username')
         if not username:
             flash('Please log in to view your tickets.', category='error')
             return redirect(url_for('index'))
 
-        name = session.get('name')  # Still get name for display
-        role = session.get('role')  # Get user role
+        name = session.get('name')
+        role = session.get('role')
+        user_category = session.get('category', '')
 
         conn = connect()
         cursor = conn.cursor()
 
-        # Fetch production lines
-        cursor.execute('Exec GetAllProdLines')
+        cursor.execute("Exec GetAllProdLines")
         lines = cursor.fetchall()
 
         def row_to_dict(cursor, row):
             columns = [column[0] for column in cursor.description]
-            return dict(zip(columns, row))
+            result = dict(zip(columns, row))
+            for key, value in result.items():
+                if hasattr(value, 'strftime'):
+                    result[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+            return result
 
-        # DTAI
+        # MTSE - Segurança
         cursor.execute("""
-            SELECT ai.id, ai.internal_code, ai.title, ai.requester, u1.name as requester_name,
-                   ai.prod_line, ai.n_sap, ai.reason, ai.current_process, ai.action_to_improve,
-                   ai.filename, ai.expected_date, ai.responsible, u2.name as responsible_name,
-                   ai.status, ai.observations, ai.created_at, ai.updated_at, ai.notes, ai.requester_response
-            FROM automation_improvement ai
-            LEFT JOIN users u1 ON ai.requester = u1.name
-            LEFT JOIN users u2 ON ai.responsible = u2.username
-            WHERE ai.requester = ? AND ai.is_deleted = 0
+            SELECT mr.id, mr.internal_code, mr.title, mr.requester, u1.name as requester_name,
+                   mr.line as prod_line, mr.equipment as n_sap, mr.description, mr.eight_d_number,
+                   mr.d3, mr.d7, mr.filename, mr.expected_date, mr.responsible, u2.name as responsible_name,
+                   mr.status, mr.notes, mr.created_at, mr.updated_at, mr.cc_emails
+            FROM maintenance_requests mr
+            LEFT JOIN users u1 ON mr.requester = u1.name
+            LEFT JOIN users u2 ON mr.responsible = u2.username
+            WHERE mr.requester = ? AND mr.type = 'MTSE' AND mr.is_deleted = 0
         """, (name,))
-        dtai_tickets = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+        mtse_tickets = [row_to_dict(cursor, row) for row in cursor.fetchall()]
 
-        # DTAS
+        # MTQA - Qualidade
         cursor.execute("""
-            SELECT asu.id, asu.internal_code, asu.title, asu.requester, u1.name as requester_name,
-                   asu.prod_line, asu.n_sap, asu.reason, asu.current_process, asu.action_to_improve,
-                   asu.observations_requester, asu.observations_dt,
-                   asu.filename, asu.expected_date, asu.responsible, u2.name as responsible_name,
-                   asu.status, asu.created_at, asu.updated_at, asu.notes, asu.requester_response
-            FROM automation_support asu
-            LEFT JOIN users u1 ON asu.requester = u1.name
-            LEFT JOIN users u2 ON asu.responsible = u2.username
-            WHERE asu.requester = ? AND asu.is_deleted = 0
+            SELECT mr.id, mr.internal_code, mr.title, mr.requester, u1.name as requester_name,
+                   mr.line as prod_line, mr.equipment as n_sap, mr.description, mr.eight_d_number,
+                   mr.d3, mr.d7, mr.filename, mr.expected_date, mr.responsible, u2.name as responsible_name,
+                   mr.status, mr.notes, mr.created_at, mr.updated_at, mr.cc_emails
+            FROM maintenance_requests mr
+            LEFT JOIN users u1 ON mr.requester = u1.name
+            LEFT JOIN users u2 ON mr.responsible = u2.username
+            WHERE mr.requester = ? AND mr.type = 'MTQA' AND mr.is_deleted = 0
         """, (name,))
-        dtas_tickets = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+        mtqa_tickets = [row_to_dict(cursor, row) for row in cursor.fetchall()]
 
-        # DTNA
+        # MTEX - Excelência Operacional
         cursor.execute("""
-            SELECT na.id, na.internal_code, na.title, na.requester, u1.name as requester_name,
-                   na.department, na.reason, na.current_process, na.objective,
-                   na.filename, na.expected_date, na.responsible, u2.name as responsible_name,
-                   na.status, na.observations, na.created_at, na.updated_at, na.notes, na.requester_response
-            FROM new_application na
-            LEFT JOIN users u1 ON na.requester = u1.name
-            LEFT JOIN users u2 ON na.responsible = u2.username
-            WHERE na.requester = ? AND na.is_deleted = 0
+            SELECT mr.id, mr.internal_code, mr.title, mr.requester, u1.name as requester_name,
+                   mr.line as prod_line, mr.equipment as n_sap, mr.description, mr.eight_d_number,
+                   mr.d3, mr.d7, mr.filename, mr.expected_date, mr.responsible, u2.name as responsible_name,
+                   mr.status, mr.notes, mr.created_at, mr.updated_at, mr.cc_emails
+            FROM maintenance_requests mr
+            LEFT JOIN users u1 ON mr.requester = u1.name
+            LEFT JOIN users u2 ON mr.responsible = u2.username
+            WHERE mr.requester = ? AND mr.type = 'MTEX' AND mr.is_deleted = 0
         """, (name,))
-        dtna_tickets = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+        mtex_tickets = [row_to_dict(cursor, row) for row in cursor.fetchall()]
 
-        # DTSI
+        # MTREP - Reparações Eletrónicas
         cursor.execute("""
-            SELECT si.id, si.internal_code, si.title, si.requester, u1.name as requester_name,
-                   si.app_name, si.reason, si.issue,
-                   si.filename, si.expected_date, si.responsible, u2.name as responsible_name,
-                   si.status, si.observations, si.created_at, si.updated_at, si.notes, si.requester_response
-            FROM software_issue si
-            LEFT JOIN users u1 ON si.requester = u1.name
-            LEFT JOIN users u2 ON si.responsible = u2.username
-            WHERE si.requester = ? AND si.is_deleted = 0
+            SELECT mr.id, mr.internal_code, mr.title, mr.requester, u1.name as requester_name,
+                   mr.line as prod_line, mr.equipment as n_sap, mr.description,
+                   mr.filename, mr.expected_date, mr.responsible, u2.name as responsible_name,
+                   mr.status, mr.notes, mr.created_at, mr.updated_at, mr.cc_emails
+            FROM maintenance_requests mr
+            LEFT JOIN users u1 ON mr.requester = u1.name
+            LEFT JOIN users u2 ON mr.responsible = u2.username
+            WHERE mr.requester = ? AND mr.type = 'MTREP' AND mr.is_deleted = 0
         """, (name,))
-        dtsi_tickets = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-
-        # DTIR (Software Internal Reports) - Only visible to Software and Admin category users
-        dtir_tickets = []
-        user_category = (session.get('category') or '').lower()
-        
-        # Security: Only Software and Admin categories can access DTIR
-        allowed_dtir = user_category in ['software', 'admin']
-        
-        if allowed_dtir:
-            try:
-                cursor.execute("""
-                    SELECT sir.id, sir.internal_code, sir.title, sir.requester,
-                           sir.reporter, sir.reporter as reporter_name,
-                           sir.description, sir.filename, sir.status, sir.created_at, sir.updated_at,
-                           sir.requester_response, sir.notes, sir.expected_date, sir.responsible
-                    FROM software_internal_reports sir
-                    WHERE sir.requester = ? AND sir.is_deleted = 0
-                """, (name,))
-                dtir_tickets = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-            except Exception as e:
-                logging.error(f"Error fetching DTIR tickets for {username}: {str(e)}")
-                dtir_tickets = []
-        else:
-            if username and user_category not in ['software', 'admin']:
-                logging.warning(f"DTIR access denied for {username} with category {user_category}")
-            dtir_tickets = []
+        mtrep_tickets = [row_to_dict(cursor, row) for row in cursor.fetchall()]
 
         cursor.close()
         conn.close()
 
         return render_template('homerequests.html',
                              lines=lines,
-                             dtai_tickets=dtai_tickets,
-                             dtas_tickets=dtas_tickets,
-                             dtna_tickets=dtna_tickets,
-                             dtsi_tickets=dtsi_tickets,
-                             dtir_tickets=dtir_tickets,
+                             mtse_tickets=mtse_tickets,
+                             mtqa_tickets=mtqa_tickets,
+                             mtex_tickets=mtex_tickets,
+                             mtrep_tickets=mtrep_tickets,
                              user_role=role,
                              user_category=user_category)
     except Exception as e:
@@ -484,7 +459,9 @@ def login():
             session['role'] = account[4]
             session['auth_method'] = 'manual'
             session['name'] = account[6] if account[6] else account[1]  # Use username if name is None
-            session['category'] = account[5] if len(account) > 5 and account[5] else ''  # Use empty string if category is NULL
+            session['category'] = account[5] if len(account) > 5 and account[5] else ''
+            session['area'] = account[7] if len(account) > 7 and account[7] else ''
+            session['turno'] = account[8] if len(account) > 8 and account[8] else ''
             if session['role'] == 0:
                 return redirect(url_for('home'))
             else:
@@ -1138,6 +1115,436 @@ def addSoftwareInternalReport():
             'message': f"ERROR: {str(e)}",
             'keep_modal_open': True
         })
+
+@app.route('/create_ticket', methods=['POST'])
+def create_ticket():
+    try:
+        requester = session['name']
+        ticket_type = request.form.get('ticket_type', 'MTSE')
+        
+        title = request.form['title']
+        prod_line = request.form.get('prod_line', '')
+        equipment = request.form.get('equipamentSAP', '')
+        description = request.form.get('description', '')
+        eight_d_number = request.form.get('8D_Number', '')
+        d3 = 1 if request.form.get('d3') else 0
+        d7 = 1 if request.form.get('d7') else 0
+
+        cc_values = request.form.getlist('cc_emails')
+        if not cc_values:
+            cc_values = request.form.get('cc_emails', '')
+        if isinstance(cc_values, str):
+            cc_list = [v.strip() for v in cc_values.split(',') if v.strip()]
+        else:
+            cc_list = cc_values
+        cc_emails = ', '.join(cc_list) if cc_list else ''
+        cc_emails_list = get_emails_from_cc_input(cc_list)
+
+        filename = None
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename != '':
+                if allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    file.save(file_path)
+
+        current_year = datetime.now().year
+        conn = connect()
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT name, email FROM users WHERE name = ?", (requester,))
+        user_row = cursor.fetchone()
+        requester_name = user_row[0] if user_row else requester
+        requester_email = user_row[1] if user_row else ''
+
+        cursor.execute("SELECT TOP 1 internal_code FROM maintenance_requests WHERE type = ? ORDER BY id DESC", (ticket_type,))
+        last_code = cursor.fetchone()
+
+        if last_code:
+            last_number = int(last_code[0].split('-')[-1])
+            new_number = last_number + 1
+        else:
+            new_number = 1
+        new_code = f"{ticket_type}-{current_year}-{new_number:03d}"
+
+        category_labels = {
+            'MTSE': 'Segurança',
+            'MTQA': 'Qualidade',
+            'MTEX': 'Excelência Operacional',
+            'MTREP': 'Reparação Eletrónica'
+        }
+
+        if ticket_type in ['MTSE', 'MTQA', 'MTEX']:
+            cursor.execute("""
+                INSERT INTO maintenance_requests
+                (internal_code, type, title, line, equipment, description, eight_d_number, d3, d7,
+                 requester, requester_name, requester_email, cc_emails, filename, created_at, updated_at)
+                OUTPUT INSERTED.ID
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
+            """, (new_code, ticket_type, title, prod_line, equipment, description, eight_d_number,
+                  d3, d7, requester, requester_name, requester_email, cc_emails, filename))
+        else:
+            cursor.execute("""
+                INSERT INTO maintenance_requests
+                (internal_code, type, title, line, equipment, description,
+                 requester, requester_name, requester_email, cc_emails, filename, created_at, updated_at)
+                OUTPUT INSERTED.ID
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
+            """, (new_code, ticket_type, title, prod_line, equipment, description, 
+                  requester, requester_name, requester_email, cc_emails, filename))
+        
+        conn.commit()
+        
+        try:
+            send_ticket_status_email(
+                requester_email, requester_name, new_code, title, 'opened',
+                cc_emails=cc_emails_list
+            )
+        except Exception as e:
+            print(f"[EMAIL ERROR] Failed to send creation email for ticket {new_code}: {str(e)}")
+
+        cursor.close()
+        conn.close()
+
+        category_label = category_labels.get(ticket_type, ticket_type)
+        return jsonify({
+            'success': True,
+            'message': f'Pedido de {category_label} criado com sucesso!',
+            'ticket_code': new_code,
+            'keep_modal_open': False
+        })
+    except Exception as e:
+        logging.error(f"Error in create_ticket: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f"ERRO: {str(e)}",
+            'keep_modal_open': True
+        })
+
+@app.route('/addSeguranca', methods=['GET', 'POST'])
+def addSeguranca():
+    try:
+        if request.method == 'POST':
+            requester = session['name']
+            title = request.form['title']
+            prod_line = request.form['prod_line']
+            equipment = request.form['equipamentSAP']
+            description = request.form['description']
+            eight_d_number = request.form.get('8D_Number', '')
+            d3 = 1 if request.form.get('d3') else 0
+            d7 = 1 if request.form.get('d7') else 0
+
+            cc_values = request.form.getlist('cc_emails')
+            if not cc_values:
+                cc_values = request.form.get('cc_emails', '')
+            if isinstance(cc_values, str):
+                cc_list = [v.strip() for v in cc_values.split(',') if v.strip()]
+            else:
+                cc_list = cc_values
+            cc_emails = ', '.join(cc_list) if cc_list else ''
+            cc_emails_list = get_emails_from_cc_input(cc_list)
+
+            filename = None
+            if 'image' in request.files:
+                file = request.files['image']
+                if file and file.filename != '':
+                    if allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                    else:
+                        return jsonify({
+                            'success': False,
+                            'message': f'Tipo de ficheiro inválido: {file.filename}',
+                            'keep_modal_open': True
+                        })
+
+            current_year = datetime.now().year
+            conn = connect()
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT name, email FROM users WHERE name = ?", (requester,))
+            user_row = cursor.fetchone()
+            requester_name = user_row[0] if user_row else requester
+            requester_email = user_row[1] if user_row else ''
+            cursor.execute("SELECT TOP 1 internal_code FROM maintenance_requests WHERE type = 'MTSE' ORDER BY id DESC")
+            last_code = cursor.fetchone()
+
+            if last_code:
+                last_number = int(last_code[0].split('-')[-1])
+                new_number = last_number + 1
+            else:
+                new_number = 1
+            new_code = f"MTSE-{current_year}-{new_number:03d}"
+
+            cursor.execute("""
+                INSERT INTO maintenance_requests
+                (internal_code, type, title, line, equipment, description, eight_d_number, d3, d7,
+                 requester, requester_name, requester_email, cc_emails, filename, created_at, updated_at)
+                OUTPUT INSERTED.ID
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
+            """, (new_code, 'MTSE', title, prod_line, equipment, description, eight_d_number,
+                  d3, d7, requester, requester_name, requester_email, cc_emails, filename))
+            conn.commit()
+            cursor.close()
+            conn.close()
+
+            return jsonify({
+                'success': True,
+                'message': 'Pedido de Segurança criado com sucesso!',
+                'ticket_code': new_code,
+                'keep_modal_open': False
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f"ERRO: {str(e)}",
+            'keep_modal_open': True
+        })
+
+@app.route('/addQualidade', methods=['GET', 'POST'])
+def addQualidade():
+    try:
+        if request.method == 'POST':
+            requester = session['name']
+            title = request.form['title']
+            prod_line = request.form['prod_line']
+            equipment = request.form['equipamentSAP']
+            description = request.form['description']
+            eight_d_number = request.form.get('8D_Number', '')
+            d3 = 1 if request.form.get('d3') else 0
+            d7 = 1 if request.form.get('d7') else 0
+
+            cc_values = request.form.getlist('cc_emails')
+            if not cc_values:
+                cc_values = request.form.get('cc_emails', '')
+            if isinstance(cc_values, str):
+                cc_list = [v.strip() for v in cc_values.split(',') if v.strip()]
+            else:
+                cc_list = cc_values
+            cc_emails = ', '.join(cc_list) if cc_list else ''
+            cc_emails_list = get_emails_from_cc_input(cc_list)
+
+            filename = None
+            if 'image' in request.files:
+                file = request.files['image']
+                if file and file.filename != '':
+                    if allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                    else:
+                        return jsonify({
+                            'success': False,
+                            'message': f'Tipo de ficheiro inválido: {file.filename}',
+                            'keep_modal_open': True
+                        })
+
+            current_year = datetime.now().year
+            conn = connect()
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT name, email FROM users WHERE name = ?", (requester,))
+            user_row = cursor.fetchone()
+            requester_name = user_row[0] if user_row else requester
+            requester_email = user_row[1] if user_row else ''
+
+            cursor.execute("SELECT TOP 1 internal_code FROM maintenance_requests WHERE type = 'MTQA' ORDER BY id DESC")
+            last_code = cursor.fetchone()
+
+            if last_code:
+                last_number = int(last_code[0].split('-')[-1])
+                new_number = last_number + 1
+            else:
+                new_number = 1
+            new_code = f"MTQA-{current_year}-{new_number:03d}"
+
+            cursor.execute("""
+                INSERT INTO maintenance_requests
+                (internal_code, type, title, line, equipment, description, eight_d_number, d3, d7,
+                 requester, requester_name, requester_email, cc_emails, filename, created_at, updated_at)
+                OUTPUT INSERTED.ID
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
+            """, (new_code, 'MTQA', title, prod_line, equipment, description, eight_d_number,
+                  d3, d7, requester, requester_name, requester_email, cc_emails, filename))
+            conn.commit()
+            cursor.close()
+            conn.close()
+
+            return jsonify({
+                'success': True,
+                'message': 'Pedido de Qualidade criado com sucesso!',
+                'ticket_code': new_code,
+                'keep_modal_open': False
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f"ERRO: {str(e)}",
+            'keep_modal_open': True
+        })
+
+@app.route('/addExcelenciaOperacional', methods=['GET', 'POST'])
+def addExcelenciaOperacional():
+    try:
+        if request.method == 'POST':
+            requester = session['name']
+            title = request.form['title']
+            prod_line = request.form['prod_line']
+            equipment = request.form['equipamentSAP']
+            description = request.form['description']
+            eight_d_number = request.form.get('8D_Number', '')
+            d3 = 1 if request.form.get('d3') else 0
+            d7 = 1 if request.form.get('d7') else 0
+
+            cc_values = request.form.getlist('cc_emails')
+            if not cc_values:
+                cc_values = request.form.get('cc_emails', '')
+            if isinstance(cc_values, str):
+                cc_list = [v.strip() for v in cc_values.split(',') if v.strip()]
+            else:
+                cc_list = cc_values
+            cc_emails = ', '.join(cc_list) if cc_list else ''
+            cc_emails_list = get_emails_from_cc_input(cc_list)
+
+            filename = None
+            if 'image' in request.files:
+                file = request.files['image']
+                if file and file.filename != '':
+                    if allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                    else:
+                        return jsonify({
+                            'success': False,
+                            'message': f'Tipo de ficheiro inválido: {file.filename}',
+                            'keep_modal_open': True
+                        })
+
+            current_year = datetime.now().year
+            conn = connect()
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT name, email FROM users WHERE name = ?", (requester,))
+            user_row = cursor.fetchone()
+            requester_name = user_row[0] if user_row else requester
+            requester_email = user_row[1] if user_row else ''
+
+            cursor.execute("SELECT TOP 1 internal_code FROM maintenance_requests WHERE type = 'MTEX' ORDER BY id DESC")
+            last_code = cursor.fetchone()
+
+            if last_code:
+                last_number = int(last_code[0].split('-')[-1])
+                new_number = last_number + 1
+            else:
+                new_number = 1
+            new_code = f"MTEX-{current_year}-{new_number:03d}"
+
+            cursor.execute("""
+                INSERT INTO maintenance_requests
+                (internal_code, type, title, line, equipment, description, eight_d_number, d3, d7,
+                 requester, requester_name, requester_email, cc_emails, filename, created_at, updated_at)
+                OUTPUT INSERTED.ID
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
+            """, (new_code, 'MTEX', title, prod_line, equipment, description, eight_d_number,
+                  d3, d7, requester, requester_name, requester_email, cc_emails, filename))
+            conn.commit()
+            cursor.close()
+            conn.close()
+
+            return jsonify({
+                'success': True,
+                'message': 'Pedido de Excelência Operacional criado com sucesso!',
+                'ticket_code': new_code,
+                'keep_modal_open': False
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f"ERRO: {str(e)}",
+            'keep_modal_open': True
+        })
+
+@app.route('/addReparacoesEletronicas', methods=['GET', 'POST'])
+def addReparacoesEletronicas():
+    try:
+        if request.method == 'POST':
+            requester = session['name']
+            title = request.form['title']
+            prod_line = request.form['prod_line']
+            equipment = request.form['equipamentSAP']
+            description = request.form['description']
+
+            cc_values = request.form.getlist('cc_emails')
+            if not cc_values:
+                cc_values = request.form.get('cc_emails', '')
+            if isinstance(cc_values, str):
+                cc_list = [v.strip() for v in cc_values.split(',') if v.strip()]
+            else:
+                cc_list = cc_values
+            cc_emails = ', '.join(cc_list) if cc_list else ''
+            cc_emails_list = get_emails_from_cc_input(cc_list)
+
+            filename = None
+            if 'image' in request.files:
+                file = request.files['image']
+                if file and file.filename != '':
+                    if allowed_file(file.filename):
+                        filename = secure_filename(file.filename)
+                        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                        file.save(file_path)
+                    else:
+                        return jsonify({
+                            'success': False,
+                            'message': f'Tipo de ficheiro inválido: {file.filename}',
+                            'keep_modal_open': True
+                        })
+
+            current_year = datetime.now().year
+            conn = connect()
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT name, email FROM users WHERE name = ?", (requester,))
+            user_row = cursor.fetchone()
+            requester_name = user_row[0] if user_row else requester
+            requester_email = user_row[1] if user_row else ''
+
+            cursor.execute("SELECT TOP 1 internal_code FROM maintenance_requests WHERE type = 'MTREP' ORDER BY id DESC")
+            last_code = cursor.fetchone()
+
+            if last_code:
+                last_number = int(last_code[0].split('-')[-1])
+                new_number = last_number + 1
+            else:
+                new_number = 1
+            new_code = f"MTREP-{current_year}-{new_number:03d}"
+
+            cursor.execute("""
+                INSERT INTO maintenance_requests
+                (internal_code, type, title, line, equipment, description,
+                 requester, requester_name, requester_email, cc_emails, filename, created_at, updated_at)
+                OUTPUT INSERTED.ID
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
+            """, (new_code, 'MTREP', title, prod_line, equipment, description, 
+                  requester, requester_name, requester_email, cc_emails, filename))
+            conn.commit()
+            cursor.close()
+            conn.close()
+
+            return jsonify({
+                'success': True,
+                'message': 'Pedido de Reparação Eletrónica criado com sucesso!',
+                'ticket_code': new_code,
+                'keep_modal_open': False
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f"ERRO: {str(e)}",
+            'keep_modal_open': True
+        })
     
 @app.route('/delete_ticket/<internal_code>', methods=['DELETE'])
 def delete_ticket(internal_code):
@@ -1148,21 +1555,13 @@ def delete_ticket(internal_code):
 
         conn = connect()
         cursor = conn.cursor()
+        
         # Determine table by code prefix
-        if internal_code.startswith('DTAI'):
-            table = 'automation_improvement'
-        elif internal_code.startswith('DTAS'):
-            table = 'automation_support'
-        elif internal_code.startswith('DTNA'):
-            table = 'new_application'
-        elif internal_code.startswith('DTSI'):
-            table = 'software_issue'
-        elif internal_code.startswith('DTIR'):
-            table = 'software_internal_reports'
+        if internal_code.startswith('MTSE') or internal_code.startswith('MTQA') or internal_code.startswith('MTEX') or internal_code.startswith('MTREP'):
+            table = 'maintenance_requests'
         else:
             return jsonify(success=False, message="Invalid ticket code"), 400
 
-        # First, check if the ticket exists and get its status
         if internal_code.startswith('DTIR'):
             cursor.execute(f"SELECT status, reporter FROM {table} WHERE internal_code = ? AND is_deleted = 0", (internal_code,))
         else:
@@ -1190,46 +1589,32 @@ def delete_ticket(internal_code):
         return jsonify(success=False, message=str(e)), 500
     
     
-@app.route('/get_software_applications', methods=['GET'])
-def get_software_applications():
-    try:
-        conn = connect()
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT application_name
-            FROM [DT_request].[dbo].[planning]
-            WHERE category = 'software'
-            ORDER BY application_name ASC
-        """)
-        apps = [row[0] for row in cursor.fetchall()]
-        cursor.close()
-        conn.close()
-        return jsonify({'success': True, 'applications': apps})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-    
 @app.route('/completed_tickets', methods=['GET', 'POST'])
 def completed_tickets():
     try:
         conn = connect()
         cursor = conn.cursor()
-        cursor.execute('Exec GetAllCompletedRequests')
-        columns = [column[0] for column in cursor.description]
-        completed_requests = [dict(zip(columns, row)) for row in cursor.fetchall()]
-
-        # Fetch completed DTIR tickets separately (SP may not include them or may return NULL for time)
         cursor.execute("""
-            SELECT internal_code, title, requester, reporter, start_date, end_date,
-                   time, responsible, observations, status
-            FROM software_internal_reports
-            WHERE status = 2 AND is_deleted = 0
+            SELECT mr.*,
+                   u_req.name AS requester_name,
+                   u_resp.name AS responsible_name,
+                   mr.line AS prod_line,
+                   mr.equipment AS n_sap,
+                   mr.type AS category
+            FROM maintenance_requests mr
+            LEFT JOIN users u_req ON mr.requester = u_req.username OR mr.requester = u_req.name
+            LEFT JOIN users u_resp ON mr.responsible = u_resp.username
+            WHERE mr.status = 2 AND mr.approved = 1 AND mr.is_deleted = 0
+            ORDER BY mr.created_at DESC
         """)
-        dtir_columns = [col[0] for col in cursor.description]
-        dtir_rows = [dict(zip(dtir_columns, row)) for row in cursor.fetchall()]
-
-        # Remove any DTIR rows from SP result (may have wrong/null time) and replace with direct query
-        completed_requests = [r for r in completed_requests if not r.get('internal_code', '').startswith('DTIR')]
-        completed_requests.extend(dtir_rows)
+        columns = [column[0] for column in cursor.description]
+        completed_requests = []
+        for row in cursor.fetchall():
+            ticket = dict(zip(columns, row))
+            for key, value in ticket.items():
+                if hasattr(value, 'strftime'):
+                    ticket[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+            completed_requests.append(ticket)
 
         # Extract unique responsibles for dropdown filter
         responsibles = sorted(set(
@@ -1253,10 +1638,29 @@ def pending_tickets():
         cursor = conn.cursor()
         
         user_identifier = session.get('name') or session.get('username')
-        cursor.execute("EXEC GetPendingRequests ?", (user_identifier,))
+        cursor.execute("""
+            SELECT mr.*,
+                   u_req.name AS requester_name,
+                   u_resp.name AS responsible_name,
+                   mr.line AS prod_line,
+                   mr.equipment AS n_sap,
+                   mr.type AS category
+            FROM maintenance_requests mr
+            LEFT JOIN users u_req ON mr.requester = u_req.username OR mr.requester = u_req.name
+            LEFT JOIN users u_resp ON mr.responsible = u_resp.username
+            WHERE mr.status IN (0, 1) AND mr.approved = 1 AND mr.is_deleted = 0
+                AND (mr.responsible = ? OR mr.responsible IN (SELECT name FROM users WHERE username = ?) OR mr.responsible IN (SELECT username FROM users WHERE name = ?))
+            ORDER BY mr.created_at DESC
+        """, (user_identifier, user_identifier, user_identifier))
         
         columns = [column[0] for column in cursor.description]
-        pending_requests = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        pending_requests = []
+        for row in cursor.fetchall():
+            ticket = dict(zip(columns, row))
+            for key, value in ticket.items():
+                if hasattr(value, 'strftime'):
+                    ticket[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+            pending_requests.append(ticket)
         
         cursor.close()
         conn.close()
@@ -1290,9 +1694,10 @@ def edit_task():
             flash(f'Missing required fields: {", ".join(missing_fields)}', 'error')
             return redirect(url_for('pending_tickets'))
             
-        # Validate status value - should be 0, 1, 3, 4, 5, 6, or 7 for pending tasks
-        if status not in ['0', '1', '3', '4', '5', '6', '7']:
-            flash('Invalid status value. Status must be 0 (Waiting), 1 (In Progress), 3 (Under Analysis), 4 (Waiting from DT), 5 (Waiting from Requester), 6 (Waiting for Line Availability), or 7 (Waiting Maintenance Action)', 'error')
+        # Validate status value - should be 0, 1, or 2 for the new state logic
+        # 0 = Aprovado (waiting for work), 1 = Em Progresso, 2 = Completo
+        if status not in ['0', '1', '2']:
+            flash('Invalid status value. Status must be 0 (Aprovado), 1 (Em Progresso), or 2 (Completo)', 'error')
             return redirect(url_for('pending_tickets'))
         
         # Convert status to integer
@@ -1305,85 +1710,25 @@ def edit_task():
         cursor = conn.cursor()
         
         # Determinar tabela baseada no código do ticket
-        if request_code.startswith('DTAI'):
-            table = 'automation_improvement'
-            query_select = "SELECT status, notes FROM automation_improvement WHERE internal_code = ? AND is_deleted = 0"
-            if has_approved_field:
-                query_update = """UPDATE automation_improvement 
-                            SET status = ?, approved = ?, expected_date = ?, responsible = ?, notes = ?, updated_at = GETDATE()
-                            WHERE internal_code = ? AND status IN (0, 1, 3, 4, 5, 6, 7) AND is_deleted = 0"""
-            else:
-                query_update = """UPDATE automation_improvement 
-                            SET status = ?, expected_date = ?, responsible = ?, notes = ?, updated_at = GETDATE()
-                            WHERE internal_code = ? AND status IN (0, 1, 3, 4, 5, 6, 7) AND is_deleted = 0"""
-        elif request_code.startswith('DTAS'):
-            table = 'automation_support'
-            query_select = "SELECT status, notes FROM automation_support WHERE internal_code = ? AND is_deleted = 0"
-            if has_approved_field:
-                query_update = """UPDATE automation_support 
-                            SET status = ?, approved = ?, expected_date = ?, responsible = ?, notes = ?, updated_at = GETDATE()
-                            WHERE internal_code = ? AND status IN (0, 1, 3, 4, 5, 6, 7) AND is_deleted = 0"""
-            else:
-                query_update = """UPDATE automation_support 
-                            SET status = ?, expected_date = ?, responsible = ?, notes = ?, updated_at = GETDATE()
-                            WHERE internal_code = ? AND status IN (0, 1, 3, 4, 5, 6, 7) AND is_deleted = 0"""
-        elif request_code.startswith('DTNA'):
-            table = 'new_application'
-            query_select = "SELECT status, notes FROM new_application WHERE internal_code = ? AND is_deleted = 0"
-            if has_approved_field:
-                query_update = """UPDATE new_application 
-                            SET status = ?, approved = ?, expected_date = ?, responsible = ?, notes = ?, updated_at = GETDATE()
-                            WHERE internal_code = ? AND status IN (0, 1, 3, 4, 5, 6, 7) AND is_deleted = 0"""
-            else:
-                query_update = """UPDATE new_application 
-                            SET status = ?, expected_date = ?, responsible = ?, notes = ?, updated_at = GETDATE()
-                            WHERE internal_code = ? AND status IN (0, 1, 3, 4, 5, 6, 7) AND is_deleted = 0"""
-        elif request_code.startswith('DTSI'):
-            table = 'software_issue'
-            query_select = "SELECT status, notes FROM software_issue WHERE internal_code = ? AND is_deleted = 0"
-            if has_approved_field:
-                query_update = """UPDATE software_issue 
-                            SET status = ?, approved = ?, expected_date = ?, responsible = ?, notes = ?, updated_at = GETDATE()
-                            WHERE internal_code = ? AND status IN (0, 1, 3, 4, 5, 6, 7) AND is_deleted = 0"""
-            else:
-                query_update = """UPDATE software_issue 
-                            SET status = ?, expected_date = ?, responsible = ?, notes = ?, updated_at = GETDATE()
-                            WHERE internal_code = ? AND status IN (0, 1, 3, 4, 5, 6, 7) AND is_deleted = 0"""
-        elif request_code.startswith('DTIR'):
-            table = 'software_internal_reports'
-            query_select = "SELECT status, notes FROM software_internal_reports WHERE internal_code = ? AND is_deleted = 0"
-            query_update = """UPDATE software_internal_reports 
+        if request_code.startswith('MTSE') or request_code.startswith('MTQA') or request_code.startswith('MTEX') or request_code.startswith('MTREP'):
+            table = 'maintenance_requests'
+            query_select = "SELECT status, approved, notes FROM maintenance_requests WHERE internal_code = ? AND is_deleted = 0"
+            query_update = """UPDATE maintenance_requests 
                         SET status = ?, expected_date = ?, responsible = ?, notes = ?, updated_at = GETDATE()
-                        WHERE internal_code = ? AND status IN (0, 1, 3, 4, 5, 6, 7) AND is_deleted = 0"""
+                        WHERE internal_code = ? AND approved = 1 AND is_deleted = 0"""
         else:
             flash('Invalid request code format', 'error')
             return redirect(url_for('pending_tickets'))
         
-        # Buscar status e notes atuais
+        # Buscar status, approved e notes atuais
         cursor.execute(query_select, (request_code,))
         current_data = cursor.fetchone()
         current_status = current_data[0] if current_data else None
-        current_notes = current_data[1] if current_data else None
+        current_approved = current_data[1] if current_data else None
+        current_notes = current_data[2] if current_data else None
         
-        # Validação: Bloquear mudança PARA "Under Analysis" (3) se o status atual NÃO for "Under Analysis"
-        if status_int == 3 and current_status != 3:
-            flash('Cannot change status back to Under Analysis. Once moved from Under Analysis, you cannot return to it.', 'error')
-            return redirect(url_for('pending_tickets'))
-        
-        # Auto-set approved = 1 when moving OUT of Under Analysis (status 3)
-        if current_status == 3 and status_int != 3:
-            has_approved_field = True
-            approved = '1'
-        
-        # Execute the update query com ou sem o parâmetro approved
-        if table == 'software_internal_reports':
-            # DTIR: no approved field
-            cursor.execute(query_update, (status_int, expected_date or None, responsible or None, notes, request_code))
-        elif has_approved_field:
-            approved_int = 1 if approved == '1' else 0
-            cursor.execute(query_update, (status_int, approved_int, expected_date or None, responsible or None, notes, request_code))
-        else:
-            cursor.execute(query_update, (status_int, expected_date or None, responsible or None, notes, request_code))
+        # Execute the update query for maintenance_requests
+        cursor.execute(query_update, (status_int, expected_date or None, responsible or None, notes, request_code))
         
         if cursor.rowcount == 0:
             flash('Task not found or not editable (task may be completed or rejected)', 'error')
@@ -1453,34 +1798,11 @@ def edit_task():
             # Add to week plan if checkbox was checked
             add_to_week_plan = request.form.get('add_to_week_plan', '')
             if add_to_week_plan == '1':
-                if table in ('automation_improvement', 'automation_support'):
-                    task_category = 'Automation'
-                    desc_col = 'action_to_improve'
-                else:
-                    task_category = 'Software'
-                    if table == 'software_issue':
-                        desc_col = 'issue'
-                    elif table == 'new_application':
-                        desc_col = 'objective'
-                    else:
-                        desc_col = 'description'
+                task_category = 'Maintenance'
+                desc_col = 'description'
 
-                # Fetch ticket details including priority if available, and start_date for planned_start_date
-                if table == 'software_internal_reports':
-                    # Ensure priority column exists
-                    try:
-                        cursor.execute("""
-                            IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'priority' AND Object_ID = Object_ID(N'software_internal_reports'))
-                            BEGIN
-                                ALTER TABLE software_internal_reports ADD priority NVARCHAR(20) DEFAULT 'Medium' NULL
-                            END
-                        """)
-                        conn.commit()
-                    except Exception as e:
-                        logging.warning(f"Could not ensure priority column exists: {str(e)}")
-                    cursor.execute(f"SELECT title, {desc_col}, priority, start_date FROM {table} WHERE internal_code = ?", (request_code,))
-                else:
-                    cursor.execute(f"SELECT title, {desc_col} FROM {table} WHERE internal_code = ?", (request_code,))
+                # Fetch ticket details for planned_start_date
+                cursor.execute("SELECT title, description, priority, start_date FROM maintenance_requests WHERE internal_code = ?", (request_code,))
 
                 ticket_row = cursor.fetchone()
                 if ticket_row:
@@ -1545,7 +1867,7 @@ def edit_task():
 
                     wp_username = session.get('username', 'unknown')
                     cursor.execute("""
-                        INSERT INTO [DT_request].[dbo].[tasks] (
+                        INSERT INTO tasks (
                             category, week_number, title, description, responsible,
                             priority, status, planned_end_date, planned_start_date,
                             ticket_internal_code, ticket_table, task_type, created_by, created_at, updated_at,
@@ -1577,11 +1899,28 @@ def all_pending_tickets():
         conn = connect()
         cursor = conn.cursor()
         
-        # Use the updated stored procedure to get all pending requests (including Under Analysis)
-        cursor.execute('EXEC [GetAllPendingRequests]')
+        cursor.execute("""
+            SELECT mr.*,
+                   u_req.name AS requester_name,
+                   u_resp.name AS responsible_name,
+                   mr.line AS prod_line,
+                   mr.equipment AS n_sap,
+                   mr.type AS category
+            FROM maintenance_requests mr
+            LEFT JOIN users u_req ON mr.requester = u_req.username OR mr.requester = u_req.name
+            LEFT JOIN users u_resp ON mr.responsible = u_resp.username
+            WHERE mr.status IN (0, 1) AND mr.approved = 1 AND mr.is_deleted = 0
+            ORDER BY mr.created_at DESC
+        """)
         
         columns = [column[0] for column in cursor.description]
-        pending_requests = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        pending_requests = []
+        for row in cursor.fetchall():
+            ticket = dict(zip(columns, row))
+            for key, value in ticket.items():
+                if hasattr(value, 'strftime'):
+                    ticket[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+            pending_requests.append(ticket)
         
         # Extract unique responsibles for dropdown filter
         responsibles = sorted(set(
@@ -1609,53 +1948,14 @@ def get_task_details(task_code):
         conn = connect()
         cursor = conn.cursor()
         
-        # Determine which table to query based on task code
-        if task_code.startswith('DTAI'):
-            query = """SELECT internal_code, title, requester, prod_line, n_sap, reason,
-                            current_process, action_to_improve, expected_date,
-                            responsible, status, filename, notes, created_at, updated_at,
-                            requester_response,
-                            NULL as department, NULL as objective, NULL as app_name, NULL as issue
-                    FROM automation_improvement
-                    WHERE internal_code = ? AND (approved = 1 OR approved IS NULL) AND is_deleted = 0"""
-        elif task_code.startswith('DTAS'):
-            query = """SELECT internal_code, title, requester, prod_line, n_sap, reason,
-                              current_process, action_to_improve, ISNULL(observations_requester, '') as observations_requester,
-                              ISNULL(observations_dt, '') as observations_dt, expected_date, responsible, status, filename, notes, created_at, updated_at,
-                              requester_response,
-                              NULL as department, NULL as objective, NULL as app_name, NULL as issue
-                      FROM automation_support
-                      WHERE internal_code = ? AND (approved = 1 OR approved IS NULL) AND is_deleted = 0"""
-        elif task_code.startswith('DTNA'):
-            query = """SELECT internal_code, title, requester, NULL as prod_line, NULL as n_sap,
-                              reason, current_process, NULL as action_to_improve, observations,
-                              expected_date, responsible, status, filename, notes, department, objective, created_at, updated_at,
-                              requester_response,
-                              NULL as app_name, NULL as issue
-                      FROM new_application
-                      WHERE internal_code = ? AND (approved = 1 OR approved IS NULL) AND is_deleted = 0"""
-        elif task_code.startswith('DTSI'):
-            query = """SELECT internal_code, title, requester, prod_line, NULL as n_sap, reason,
-                              NULL as current_process, NULL as action_to_improve, observations,
-                              expected_date, responsible, status, filename, notes, NULL as department,
-                              NULL as objective, app_name, issue, created_at, updated_at, requester_response
-                      FROM software_issue
-                      WHERE internal_code = ? AND (approved = 1 OR approved IS NULL) AND is_deleted = 0"""
-        elif task_code.startswith('DTIR'):
-            query = """SELECT internal_code, title, requester, reporter, description,
-                              description as action_to_improve, description as issue,
-                              status, filename, created_at, updated_at,
-                              notes, expected_date, responsible,
-                              ISNULL(start_date, NULL) as start_date, ISNULL(end_date, NULL) as end_date,
-                              ISNULL(time, NULL) as time, ISNULL(observations, '') as observations,
-                              requester_response,
-                              NULL as prod_line, NULL as n_sap, NULL as reason,
-                              NULL as current_process,
-                              NULL as department, NULL as objective, NULL as app_name
-                      FROM software_internal_reports
-                      WHERE internal_code = ? AND is_deleted = 0"""
-        else:
-            return jsonify({'error': 'Invalid task code'}), 400
+        # Usar a tabela maintenance_requests
+        query = """SELECT internal_code, title, type, description, line as prod_line, equipment as n_sap,
+                          requester, responsible, responsible_name, status, filename, notes, 
+                          observations, requester_response, expected_date, eight_d_number, d3, d7,
+                          created_at, updated_at, completion_datetime, time_spent,
+                          cc_emails, rejection_reason
+                   FROM maintenance_requests
+                   WHERE internal_code = ? AND is_deleted = 0"""
         
         cursor.execute(query, (task_code,))
         columns = [column[0] for column in cursor.description]
@@ -1693,11 +1993,8 @@ def get_task_details(task_code):
             else:
                 task_data['expected_date'] = ''
             
-            # Add observations_requester field mapping for compatibility
-            if task_code.startswith('DTAS') and 'observations_requester' not in task_data:
-                task_data['observations_requester'] = task_data.get('observations_requester', '')
-            elif not task_code.startswith('DTAS'):
-                task_data['observations_requester'] = task_data.get('observations', '')
+            # Map observations for compatibility
+            task_data['observations_requester'] = task_data.get('observations', '')
 
             # Parse responsible to array for multi-select support
             task_data['responsible'] = parse_responsible(task_data.get('responsible'))
@@ -1751,40 +2048,16 @@ def check_duplicate():
         return jsonify({'success': False, 'message': 'Not authenticated'}), 401
 
     title = request.args.get('title', '').strip()
-    reason = request.args.get('reason', '').strip()
     ticket_type = request.args.get('type', '').upper()
 
     if not title or not ticket_type:
         return jsonify({'success': False, 'message': 'Missing required parameters'}), 400
 
-    # Map ticket type to table and reason column
-    type_map = {
-        'DTAI': {'table': 'automation_improvement', 'reason_col': 'reason'},
-        'DTAS': {'table': 'automation_support', 'reason_col': 'reason'},
-        'DTNA': {'table': 'new_application', 'reason_col': 'reason'},
-        'DTSI': {'table': 'software_issue', 'reason_col': 'reason'},
-        'DTIR': {'table': 'software_internal_reports', 'reason_col': None}
-    }
-
-    if ticket_type not in type_map:
-        return jsonify({'success': False, 'message': 'Invalid ticket type'}), 400
-
-    table_info = type_map[ticket_type]
-    table = table_info['table']
-    reason_col = table_info['reason_col']
-
     conn = connect()
     cursor = conn.cursor()
 
-    # Build query: search by title (and reason if provided)
-    if reason_col:
-        sql = f"SELECT internal_code, title, status FROM {table} WHERE title LIKE ? AND reason LIKE ? AND is_deleted = 0"
-        params = [f'%{title}%', f'%{reason}%']
-    else:
-        sql = f"SELECT internal_code, title, status FROM {table} WHERE title LIKE ? AND is_deleted = 0"
-        params = [f'%{title}%']
-
-    sql += " ORDER BY created_at DESC"
+    sql = "SELECT internal_code, title, status FROM maintenance_requests WHERE title LIKE ? AND type = ? AND is_deleted = 0 ORDER BY created_at DESC"
+    params = [f'%{title}%', ticket_type]
 
     try:
         cursor.execute(sql, params)
@@ -1805,36 +2078,35 @@ def new_tickets():
         
         conn = connect()  
         cursor = conn.cursor()
-        cursor.execute("EXEC GetNewRequests")
+        cursor.execute("""
+             SELECT mr.*,
+                 u_req.name AS requester_name,
+                 u_resp.name AS responsible_name,
+                 mr.line AS prod_line,
+                 mr.equipment AS n_sap,
+                 mr.type AS category
+             FROM maintenance_requests mr
+             LEFT JOIN users u_req ON mr.requester = u_req.username OR mr.requester = u_req.name
+             LEFT JOIN users u_resp ON mr.responsible = u_resp.username
+             WHERE mr.status IS NULL AND mr.approved IS NULL AND mr.is_deleted = 0
+        """)
         columns = [column[0] for column in cursor.description]
-        new_tickets = [dict(zip(columns, row)) for row in cursor.fetchall()]
-        dtai = [r for r in new_tickets if r['category'] == 'DTAI']
-        dtas = [r for r in new_tickets if r['category'] == 'DTAS']
-        dtna = [r for r in new_tickets if r['category'] == 'DTNA']
-        dtsi = [r for r in new_tickets if r['category'] == 'DTSI']
-
-        # DTIR (Software Internal Reports) - Only visible to Software and Admin category
-        dtir = []
-        if user_category in ['software', 'admin']:
-            cursor.execute("""
-                SELECT id, internal_code, title, requester, reporter, description,
-                       filename, status, approved, created_at, updated_at,
-                       'DTIR' as category
-                FROM software_internal_reports
-                WHERE approved IS NULL AND is_deleted = 0
-                AND (status IS NULL OR status = 3)
-                ORDER BY created_at DESC
-            """)
-            dtir_columns = [column[0] for column in cursor.description]
-            dtir = [dict(zip(dtir_columns, row)) for row in cursor.fetchall()]
-        else:
-            if username:
-                logging.warning(f"DTIR access denied for {username} with category {user_category}")
+        new_tickets = []
+        for row in cursor.fetchall():
+            ticket = dict(zip(columns, row))
+            for key, value in ticket.items():
+                if hasattr(value, 'strftime'):
+                    ticket[key] = value.strftime('%Y-%m-%d %H:%M:%S')
+            new_tickets.append(ticket)
+        mtse = [r for r in new_tickets if r['category'] == 'MTSE']
+        mtqa = [r for r in new_tickets if r['category'] == 'MTQA']
+        mtex = [r for r in new_tickets if r['category'] == 'MTEX']
+        mtrep = [r for r in new_tickets if r['category'] == 'MTREP']
 
         cursor.close()
         conn.close()
         return render_template('new_tickets.html',
-                             dtai=dtai, dtas=dtas, dtna=dtna, dtsi=dtsi, dtir=dtir, user_category=user_category)
+                             mtse=mtse, mtqa=mtqa, mtex=mtex, mtrep=mtrep, user_category=user_category)
     except Exception as e:
         flash(f"Error fetching tickets: {str(e)}", category='error')
         return redirect(url_for('home'))
@@ -1851,31 +2123,11 @@ def approve_request():
         cursor = conn.cursor()
         
         # Determinar tabela e query baseada no código
-        if 'DTAI' in request_code:
-            table = 'automation_improvement'
-            query = """UPDATE automation_improvement 
-                       SET expected_date = ?, responsible = ?, approved = 1, status = 0, updated_at = GETDATE(), notes = ?
-                       WHERE internal_code = ? AND is_deleted = 0"""
-        elif 'DTAS' in request_code:
-            table = 'automation_support'
-            query = """UPDATE automation_support 
-                       SET expected_date = ?, responsible = ?, approved = 1, status = 0, updated_at = GETDATE(), notes = ?
-                       WHERE internal_code = ? AND is_deleted = 0"""
-        elif 'DTNA' in request_code:
-            table = 'new_application'
-            query = """UPDATE new_application 
-                       SET expected_date = ?, responsible = ?, approved = 1, status = 0, updated_at = GETDATE(), notes = ?
-                       WHERE internal_code = ? AND is_deleted = 0"""
-        elif 'DTSI' in request_code:
-            table = 'software_issue'
-            query = """UPDATE software_issue 
-                       SET expected_date = ?, responsible = ?, approved = 1, status = 0, updated_at = GETDATE(), notes = ?
-                       WHERE internal_code = ? AND is_deleted = 0"""
-        elif 'DTIR' in request_code:
-            table = 'software_internal_reports'
-            query = """UPDATE software_internal_reports 
-                       SET expected_date = ?, responsible = ?, approved = 1, status = 0, updated_at = GETDATE(), notes = ?
-                       WHERE internal_code = ? AND is_deleted = 0"""
+        if request_code.startswith('MTSE') or request_code.startswith('MTQA') or request_code.startswith('MTEX') or request_code.startswith('MTREP'):
+            table = 'maintenance_requests'
+            query = """UPDATE maintenance_requests 
+                       SET expected_date = ?, responsible = ?, status = 0, approved = 1, updated_at = GETDATE(), notes = ?
+                       WHERE internal_code = ? AND (status IS NULL OR status = 0) AND (approved IS NULL OR approved = 0) AND is_deleted = 0"""
         else:
             flash('Invalid request code.', 'danger')
             return redirect(url_for('new_tickets'))
@@ -1920,35 +2172,10 @@ def approve_request():
         # Add to week plan if checkbox was checked
         add_to_week_plan = request.form.get('add_to_week_plan', '')
         if add_to_week_plan == '1':
-            # Determine category and fetch ticket details
-            if table in ('automation_improvement', 'automation_support'):
-                task_category = 'Automation'
-                desc_col = 'action_to_improve'
-            else:
-                task_category = 'Software'
-                if table == 'software_issue':
-                    desc_col = 'issue'
-                elif table == 'new_application':
-                    desc_col = 'objective'
-                else:
-                    desc_col = 'description'
+            task_category = 'Maintenance'
+            desc_col = 'description'
 
-            # Fetch ticket details including priority if available, and start_date for planned_start_date
-            if table == 'software_internal_reports':
-                # Ensure priority column exists
-                try:
-                    cursor.execute("""
-                        IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'priority' AND Object_ID = Object_ID(N'software_internal_reports'))
-                        BEGIN
-                            ALTER TABLE software_internal_reports ADD priority NVARCHAR(20) DEFAULT 'Medium' NULL
-                        END
-                    """)
-                    conn.commit()
-                except Exception as e:
-                    logging.warning(f"Could not ensure priority column exists: {str(e)}")
-                cursor.execute(f"SELECT title, {desc_col}, priority, start_date FROM {table} WHERE internal_code = ?", (request_code,))
-            else:
-                cursor.execute(f"SELECT title, {desc_col} FROM {table} WHERE internal_code = ?", (request_code,))
+            cursor.execute("SELECT title, description, priority, start_date FROM maintenance_requests WHERE internal_code = ?", (request_code,))
 
             ticket_row = cursor.fetchone()
             if ticket_row:
@@ -2010,7 +2237,7 @@ def approve_request():
                         is_principal_wp = 0
 
                 cursor.execute("""
-                    INSERT INTO [DT_request].[dbo].[tasks] (
+                    INSERT INTO tasks (
                         category, week_number, title, description, responsible,
                         priority, status, planned_end_date, planned_start_date,
                         ticket_internal_code, ticket_table, task_type, created_by, created_at, updated_at,
@@ -2045,29 +2272,9 @@ def set_under_analysis():
         cursor = conn.cursor()
         
         # Determinar tabela e query baseada no código
-        if 'DTAI' in request_code:
-            table = 'automation_improvement'
-            query = """UPDATE automation_improvement 
-                       SET responsible = ?, status = 3, updated_at = GETDATE(), notes = ?
-                       WHERE internal_code = ?"""
-        elif 'DTAS' in request_code:
-            table = 'automation_support'
-            query = """UPDATE automation_support 
-                       SET responsible = ?, status = 3, updated_at = GETDATE(), notes = ?
-                       WHERE internal_code = ?"""
-        elif 'DTNA' in request_code:
-            table = 'new_application'
-            query = """UPDATE new_application 
-                       SET responsible = ?, status = 3, updated_at = GETDATE(), notes = ?
-                       WHERE internal_code = ?"""
-        elif 'DTSI' in request_code:
-            table = 'software_issue'
-            query = """UPDATE software_issue 
-                       SET responsible = ?, status = 3, updated_at = GETDATE(), notes = ?
-                       WHERE internal_code = ?"""
-        elif 'DTIR' in request_code:
-            table = 'software_internal_reports'
-            query = """UPDATE software_internal_reports 
+        if request_code.startswith('MTSE') or request_code.startswith('MTQA') or request_code.startswith('MTEX') or request_code.startswith('MTREP'):
+            table = 'maintenance_requests'
+            query = """UPDATE maintenance_requests 
                        SET responsible = ?, status = 3, updated_at = GETDATE(), notes = ?
                        WHERE internal_code = ?"""
         else:
@@ -2117,30 +2324,10 @@ def reject_request():
         cursor = conn.cursor()
         
         # Determinar tabela e query baseada no código
-        if 'DTAI' in request_code:
-            table = 'automation_improvement'
-            query = """UPDATE automation_improvement 
+        if request_code.startswith('MTSE') or request_code.startswith('MTQA') or request_code.startswith('MTEX') or request_code.startswith('MTREP'):
+            table = 'maintenance_requests'
+            query = """UPDATE maintenance_requests 
                       SET status = -1, observations = ?
-                      WHERE internal_code = ?"""
-        elif 'DTAS' in request_code:
-            table = 'automation_support'
-            query = """UPDATE automation_support 
-                      SET status = -1, observations_dt = ?
-                      WHERE internal_code = ?"""
-        elif 'DTNA' in request_code:
-            table = 'new_application'
-            query = """UPDATE new_application 
-                      SET status = -1, observations = ?
-                      WHERE internal_code = ?"""
-        elif 'DTSI' in request_code:
-            table = 'software_issue'
-            query = """UPDATE software_issue 
-                      SET status = -1, observations = ?
-                      WHERE internal_code = ?"""
-        elif 'DTIR' in request_code:
-            table = 'software_internal_reports'
-            query = """UPDATE software_internal_reports 
-                      SET status = -1, observations = ?, updated_at = GETDATE()
                       WHERE internal_code = ?"""
         else:
             flash('Invalid request code.', 'danger')
@@ -2197,30 +2384,10 @@ def conclude_request():
         cursor = conn.cursor()
 
         # Determinar tabela e query baseada no código
-        if 'DTAI' in request_code:
-            table = 'automation_improvement'
-            query = """UPDATE automation_improvement
+        if request_code.startswith('MTSE') or request_code.startswith('MTQA') or request_code.startswith('MTEX') or request_code.startswith('MTREP'):
+            table = 'maintenance_requests'
+            query = """UPDATE maintenance_requests
                        SET start_date = ?, end_date = ?, time = ?, observations = ?, status = 2
-                       WHERE internal_code = ?"""
-        elif 'DTAS' in request_code:
-            table = 'automation_support'
-            query = """UPDATE automation_support
-                       SET start_date = ?, end_date = ?, time = ?, observations_dt = ?, status = 2
-                       WHERE internal_code = ?"""
-        elif 'DTNA' in request_code:
-            table = 'new_application'
-            query = """UPDATE new_application
-                       SET start_date = ?, end_date = ?, time = ?, observations = ?, status = 2
-                       WHERE internal_code = ?"""
-        elif 'DTSI' in request_code:
-            table = 'software_issue'
-            query = """UPDATE software_issue
-                       SET start_date = ?, end_date = ?, time = ?, observations = ?, status = 2
-                       WHERE internal_code = ?"""
-        elif 'DTIR' in request_code:
-            table = 'software_internal_reports'
-            query = """UPDATE software_internal_reports
-                       SET start_date = ?, end_date = ?, time = ?, observations = ?, status = 2, updated_at = GETDATE()
                        WHERE internal_code = ?"""
         else:
             return jsonify({'success': False, 'message': 'Invalid request code'}), 400
@@ -2241,20 +2408,8 @@ def conclude_request():
             # Update the ticket with total hours from tasks
             if total_task_hours > 0:
                 total_time = total_task_hours + time
-
-                if 'DTAI' in request_code:
-                    cursor.execute("""UPDATE automation_improvement
-                                     SET time = ? WHERE internal_code = ?""", (int(total_time), request_code))
-                elif 'DTAS' in request_code:
-                    cursor.execute("""UPDATE automation_support
-                                     SET time = ? WHERE internal_code = ?""", (int(total_time), request_code))
-                elif 'DTNA' in request_code:
-                    cursor.execute("""UPDATE new_application
-                                     SET time = ? WHERE internal_code = ?""", (int(total_time), request_code))
-                elif 'DTSI' in request_code:
-                    cursor.execute("""UPDATE software_issue
-                                     SET time = ? WHERE internal_code = ?""", (int(total_time), request_code))
-
+                cursor.execute("""UPDATE maintenance_requests
+                                 SET time_spent = ? WHERE internal_code = ?""", (int(total_time), request_code))
                 conn.commit()
         except Exception as hours_error:
             # Log do erro mas não falha a operação principal
@@ -2302,24 +2457,9 @@ def waiting_from_requester():
         cursor = conn.cursor()
         
         # Determinar tabela e query baseada no código
-        if 'DTAI' in request_code:
-            table = 'automation_improvement'
-            query = """UPDATE automation_improvement 
-                      SET status = 5, observations = ?
-                      WHERE internal_code = ?"""
-        elif 'DTAS' in request_code:
-            table = 'automation_support'
-            query = """UPDATE automation_support 
-                      SET status = 5, observations_dt = ?
-                      WHERE internal_code = ?"""
-        elif 'DTNA' in request_code:
-            table = 'new_application'
-            query = """UPDATE new_application 
-                      SET status = 5, observations = ?
-                      WHERE internal_code = ?"""
-        elif 'DTSI' in request_code:
-            table = 'software_issue'
-            query = """UPDATE software_issue 
+        if request_code.startswith('MTSE') or request_code.startswith('MTQA') or request_code.startswith('MTEX') or request_code.startswith('MTREP'):
+            table = 'maintenance_requests'
+            query = """UPDATE maintenance_requests 
                       SET status = 5, observations = ?
                       WHERE internal_code = ?"""
         else:
@@ -2360,16 +2500,8 @@ def reply_waiting():
         if not request_code or not response_text:
             return jsonify({'success': False, 'message': 'Missing data'}), 400
         # Determine table based on prefix
-        if 'DTAI' in request_code:
-            table = 'automation_improvement'
-        elif 'DTAS' in request_code:
-            table = 'automation_support'
-        elif 'DTNA' in request_code:
-            table = 'new_application'
-        elif 'DTSI' in request_code:
-            table = 'software_issue'
-        elif 'DTIR' in request_code:
-            table = 'software_internal_reports'
+        if request_code.startswith('MTSE') or request_code.startswith('MTQA') or request_code.startswith('MTEX') or request_code.startswith('MTREP'):
+            table = 'maintenance_requests'
         else:
             return jsonify({'success': False, 'message': 'Invalid ticket code'}), 400
         # Verify user is the requester
@@ -2433,16 +2565,8 @@ def edit_ticket(ticket_code):
         cursor = conn.cursor()
 
         # Determinar tabela baseada no código
-        if 'DTAI' in ticket_code:
-            table = 'automation_improvement'
-        elif 'DTAS' in ticket_code:
-            table = 'automation_support'
-        elif 'DTNA' in ticket_code:
-            table = 'new_application'
-        elif 'DTSI' in ticket_code:
-            table = 'software_issue'
-        elif 'DTIR' in ticket_code:
-            table = 'software_internal_reports'
+        if ticket_code.startswith('MTSE') or ticket_code.startswith('MTQA') or ticket_code.startswith('MTEX') or ticket_code.startswith('MTREP'):
+            table = 'maintenance_requests'
         else:
             return jsonify({'success': False, 'message': 'Invalid ticket code'}), 400
 
@@ -2564,113 +2688,6 @@ def dashboard():
     return render_template('dashboard.html')
 
 
-@app.route('/tasks/<int:task_id>/create-github-issue', methods=['POST'])
-def create_task_github_issue(task_id):
-    try:
-        username = session.get('username')
-        if not username:
-            return jsonify({'success': False, 'message': 'Not authenticated'}), 401
-
-        conn = connect()
-        cursor = conn.cursor()
-
-        # Buscar tarefa com informações do projeto
-        cursor.execute("""
-            SELECT t.title, t.description, t.project_id, t.github_issue_number,
-                   p.github_repo, p.responsible
-            FROM tasks t
-            LEFT JOIN projects p ON t.project_id = p.id
-            WHERE t.id = ?
-        """, (task_id,))
-        row = cursor.fetchone()
-        if not row:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'message': 'Task not found'}), 404
-
-        title, description, project_id, existing_issue, github_repo, responsible_json = row
-
-        # Se já tem Issue associada
-        if existing_issue:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'message': 'Issue already linked', 'issue_number': existing_issue}), 400
-
-        # Se projeto não tem repositório configurado
-        if not github_repo:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'message': 'Project has no GitHub repository configured'}), 400
-
-        # Buscar assignees dos responsáveis do projeto (suporta JSON, ';' e ',')
-        assignees = get_user_github_usernames(responsible_json, cursor) if responsible_json else []
-
-        # Criar Issue no GitHub
-        issue_number = create_issue(
-            repo=github_repo,
-            title=title,
-            description=description,
-            assignees=assignees
-        )
-
-        if not issue_number:
-            cursor.close()
-            conn.close()
-            return jsonify({'success': False, 'message': 'Failed to create GitHub Issue'}), 500
-
-        # Guardar número da Issue na tarefa
-        cursor.execute("UPDATE tasks SET github_issue_number = ? WHERE id = ?", (issue_number, task_id))
-        conn.commit()
-
-        logging.info(f"GitHub Issue #{issue_number} criada manualmente para tarefa {task_id}")
-
-        cursor.close()
-        conn.close()
-
-        return jsonify({
-            'success': True,
-            'issue_number': issue_number,
-            'github_repo': github_repo,
-            'assignees': assignees
-        })
-
-    except Exception as e:
-        logging.error(f"Erro ao criar GitHub Issue para tarefa {task_id}: {str(e)}")
-        if 'conn' in locals():
-            conn.rollback()
-            cursor.close()
-            conn.close()
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-
-@app.route('/api/profile/github-username', methods=['GET', 'PUT'])
-def profile_github_username():
-    username = session.get('username')
-    if not username:
-        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
-
-    conn = connect()
-    cursor = conn.cursor()
-
-    if request.method == 'GET':
-        cursor.execute("SELECT github_username FROM users WHERE username = ?", (username,))
-        row = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        return jsonify({'success': True, 'github_username': row[0] if row else None})
-
-    # PUT
-    data = request.get_json()
-    github_username = data.get('github_username', '').strip() or None
-
-    cursor.execute("UPDATE users SET github_username = ? WHERE username = ?", (github_username, username))
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-    return jsonify({'success': True, 'github_username': github_username})
-
-
 @app.route('/api/profile', methods=['GET', 'PUT'])
 def api_profile():
     username = session.get('username')
@@ -2681,7 +2698,7 @@ def api_profile():
     cursor = conn.cursor()
 
     if request.method == 'GET':
-        cursor.execute("SELECT username, name, email, github_username FROM users WHERE username = ?", (username,))
+        cursor.execute("SELECT username, name, email FROM users WHERE username = ?", (username,))
         row = cursor.fetchone()
         cursor.close()
         conn.close()
@@ -2691,24 +2708,22 @@ def api_profile():
             'success': True,
             'username': row[0],
             'name': row[1],
-            'email': row[2],
-            'github_username': row[3]
+            'email': row[2]
         })
 
     # PUT - update profile
     data = request.get_json()
     name = data.get('name', '').strip()
     email = data.get('email', '').strip()
-    github_username = data.get('github_username', '').strip() or None
 
     if not name or not email:
         return jsonify({'success': False, 'message': 'Name and email are required'}), 400
 
     cursor.execute("""
         UPDATE users
-        SET name = ?, email = ?, github_username = ?
+        SET name = ?, email = ?
         WHERE username = ?
-    """, (name, email, github_username, username))
+    """, (name, email, username))
     conn.commit()
     cursor.close()
     conn.close()
@@ -2806,7 +2821,6 @@ def search_users():
 def tasks():
     try:
         username = session.get('username')
-        user_category = session.get('category', 'admin')  # Get user category from session
         
         if not username:
             flash('Please log in to view tasks.', 'error')
@@ -2815,195 +2829,48 @@ def tasks():
         conn = connect()
         cursor = conn.cursor()
 
-        software_tasks = []
-        automation_tasks = []
-
-        # Sempre mostrar todas as tarefas para todos os usuários
-        # O filtro de categoria será aplicado no frontend como padrão, mas pode ser alterado
-        show_software = True
-        show_automation = True
-
-        # Fetch Software tasks if needed
-        if show_software:
-            try:
-                # Tentar com schema completo primeiro
-                cursor.execute("""
-                    SELECT t.id, t.week_number, t.title, t.description, t.responsible, t.equipment,
-                           t.equipment_responsible, t.priority, t.status, t.start_date, t.end_date,
-                           t.ticket_internal_code, t.ticket_table, t.time_spent, t.planned_start_date,
-                           t.planned_end_date, t.estimated_hours, t.created_by, t.project_id, t.task_type,
-                           t.is_principal_task, p.github_repo, p.name as project_name
-                    FROM [DT_request].[dbo].[tasks] t
-                    LEFT JOIN [DT_request].[dbo].[projects] p ON t.project_id = p.id
-                    WHERE t.category = ?
-                    ORDER BY t.responsible DESC
-                """, ('Software',))
-                software_tasks = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-            except Exception as e1:
-                try:
-                    # Tentar sem schema
-                    cursor.execute("""
-                        SELECT t.id, t.week_number, t.title, t.description, t.responsible, t.equipment,
-                               t.equipment_responsible, t.priority, t.status, t.start_date, t.end_date,
-                               t.ticket_internal_code, t.ticket_table, t.time_spent, t.planned_start_date,
-                               t.planned_end_date, t.estimated_hours, t.created_by, t.project_id, t.task_type,
-                               t.is_principal_task, p.github_repo, p.name as project_name
-                        FROM tasks t
-                        LEFT JOIN projects p ON t.project_id = p.id
-                        WHERE t.category = ?
-                        ORDER BY t.responsible
-                    """, ('Software',))
-                    software_tasks = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-                except Exception as e2:
-                    # Se ainda falhar, vamos listar todas as tarefas sem filtro de categoria
-                    cursor.execute("""
-                        SELECT t.id, t.week_number, t.title, t.description, t.responsible, t.equipment,
-                               t.equipment_responsible, t.priority, t.status, t.start_date, t.end_date,
-                               t.ticket_internal_code, t.ticket_table, t.time_spent, t.planned_start_date,
-                               t.planned_end_date, t.estimated_hours, t.created_by, t.project_id, t.task_type,
-                               t.is_principal_task, p.github_repo, p.name as project_name
-                        FROM tasks t
-                        LEFT JOIN projects p ON t.project_id = p.id
-                        WHERE t.category = 'Software' OR t.category IS NULL
-                        ORDER BY t.responsible DESC
-                    """)
-                    software_tasks = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-
-        # Fetch Automation tasks if needed
-        if show_automation:
-            try:
-                cursor.execute("""
-                    SELECT t.id, t.week_number, t.title, t.description, t.responsible, t.equipment,
-                           t.equipment_responsible, t.priority, t.status, t.start_date, t.end_date,
-                           t.ticket_internal_code, t.ticket_table, t.time_spent, t.planned_start_date,
-                           t.planned_end_date, t.estimated_hours, t.created_by, t.project_id, t.task_type,
-                           t.is_principal_task, p.github_repo, p.name as project_name
-                    FROM [DT_request].[dbo].[tasks] t
-                    LEFT JOIN [DT_request].[dbo].[projects] p ON t.project_id = p.id
-                    WHERE t.category = ?
-                    ORDER BY t.responsible DESC
-                """, ('Automation',))
-                automation_tasks = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-            except Exception as e1:
-                try:
-                    cursor.execute("""
-                        SELECT t.id, t.week_number, t.title, t.description, t.responsible, t.equipment,
-                               t.equipment_responsible, t.priority, t.status, t.start_date, t.end_date,
-                               t.ticket_internal_code, t.ticket_table, t.time_spent, t.planned_start_date,
-                               t.planned_end_date, t.estimated_hours, t.created_by, t.project_id, t.task_type,
-                               t.is_principal_task, p.github_repo, p.name as project_name
-                        FROM tasks t
-                        LEFT JOIN projects p ON t.project_id = p.id
-                        WHERE t.category = ?
-                        ORDER BY t.responsible
-                    """, ('Automation',))
-                    automation_tasks = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-                except Exception as e2:
-                    cursor.execute("""
-                        SELECT t.id, t.week_number, t.title, t.description, t.responsible, t.equipment,
-                               t.equipment_responsible, t.priority, t.status, t.start_date, t.end_date,
-                               t.ticket_internal_code, t.ticket_table, t.time_spent, t.planned_start_date,
-                               t.planned_end_date, t.estimated_hours, t.created_by, t.project_id, t.task_type,
-                               t.is_principal_task, p.github_repo, p.name as project_name
-                        FROM tasks t
-                        LEFT JOIN projects p ON t.project_id = p.id
-                        WHERE t.category = 'Automation' OR t.category IS NULL
-                        ORDER BY t.responsible DESC
-                    """)
-                    automation_tasks = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-
-        # Fetch Tickets for Software - apenas pending tasks do usuário logado
+        # Fetch all tasks - sem filtro de categoria
         cursor.execute("""
-            SELECT internal_code, title, issue as description, status, expected_date, 
-                   start_date, end_date, prod_line, app_name, reason, observations, time,
-                   responsible, requester, 'software_issue' as table_name, NULL as observations_dt
-            FROM software_issue
-            WHERE responsible = ? AND status IN (0, 1, 4, 5, 6, 7) AND is_deleted = 0
-            UNION
-            SELECT internal_code, title, objective as description, status, expected_date,
-                   start_date, end_date, department, NULL as app_name, reason, observations, 
-                   time, responsible, requester, 'new_application' as table_name, NULL as observations_dt
-            FROM new_application
-            WHERE responsible = ? AND status IN (0, 1, 4, 5, 6, 7) AND is_deleted = 0
-            UNION
-            SELECT internal_code, title, description, status, NULL as expected_date,
-                   NULL as start_date, NULL as end_date, NULL as prod_line, NULL as app_name,
-                   NULL as reason, NULL as observations, NULL as time,
-                   NULL as responsible, requester, 'software_internal_reports' as table_name, NULL as observations_dt
-            FROM software_internal_reports
-            WHERE responsible = ? AND status IN (0, 1, 4, 5, 6, 7) AND is_deleted = 0
-        """, (username, username, username))
-        software_tickets = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+            SELECT t.id, t.week_number, t.title, t.description, t.responsible,
+                   t.priority, t.status, t.start_date, t.end_date,
+                   t.ticket_internal_code, t.ticket_table, t.time_spent, t.planned_start_date,
+                   t.planned_end_date, t.estimated_hours, t.created_by, t.project_id, t.task_type,
+                   t.is_principal_task, p.name as project_name
+            FROM tasks t
+            LEFT JOIN projects p ON t.project_id = p.id
+            WHERE t.is_deleted = 0
+            ORDER BY t.responsible DESC
+        """)
+        all_tasks = [row_to_dict(cursor, row) for row in cursor.fetchall()]
 
-        # Fetch Tickets for Automation - apenas pending tasks do usuário logado
+        # Fetch Tickets from maintenance_requests
         cursor.execute("""
-            SELECT internal_code, title, action_to_improve as description, status, expected_date,
-                   start_date, end_date, prod_line, n_sap, reason, current_process,
-                   observations_requester, observations_dt, time, responsible, requester,
-                   'automation_support' as table_name
-            FROM automation_support
-            WHERE responsible = ? AND status IN (0, 1, 4, 5, 6, 7) AND is_deleted = 0
-            UNION
-            SELECT internal_code, title, action_to_improve as description, status, expected_date,
-                   start_date, end_date, prod_line, n_sap, reason, current_process,
-                   observations, NULL as observations_dt, time, responsible, requester,
-                   'automation_improvement' as table_name
-            FROM automation_improvement
-            WHERE responsible = ? AND status IN (0, 1, 4, 5, 6, 7) AND is_deleted = 0
-        """, (username, username))
-        automation_tickets = [row_to_dict(cursor, row) for row in cursor.fetchall()]
+            SELECT internal_code, title, description, status, expected_date, 
+                   NULL as start_date, NULL as end_date, line as prod_line, NULL as app_name,
+                   NULL as reason, notes as observations, time_spent as time,
+                   responsible, requester, 'maintenance_requests' as table_name, observations as observations_dt
+            FROM maintenance_requests
+            WHERE status IN (0, 1) AND approved = 1 AND is_deleted = 0
+            ORDER BY created_at DESC
+        """)
+        tickets = [row_to_dict(cursor, row) for row in cursor.fetchall()]
 
         cursor.close()
 
-        # Fetch Projects for dropdown - only projects where the user is responsible
+        # Fetch Projects for dropdown
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, name, description, category, created_by, created_at, updated_at, responsible
-            FROM [DT_request].[dbo].[projects]
-            WHERE responsible LIKE ?
+            SELECT id, name, description, created_by, created_at, updated_at, responsible
+            FROM projects
+            WHERE is_deleted = 0
             ORDER BY name
-        """, (f'%{username}%',))
-        projects_raw = [row_to_dict(cursor, row) for row in cursor.fetchall()]
-        logging.info(f"[DEBUG] Found {len(projects_raw)} raw projects matching username '{username}'")
+        """)
+        projects = [row_to_dict(cursor, row) for row in cursor.fetchall()]
         
-        # Filter projects where the username is actually in the responsible JSON/list
-        projects = []
-        for proj in projects_raw:
-            try:
-                responsible_data = proj.get('responsible', '')
-                if not responsible_data:
-                    logging.info(f"[DEBUG] Project {proj.get('name')} (ID {proj.get('id')}): no responsible data")
-                    continue
-                
-                # Try to parse as JSON
-                responsible_list = []
-                try:
-                    responsible_list = json.loads(responsible_data)
-                except json.JSONDecodeError:
-                    # If not valid JSON, try parsing as comma-separated string
-                    logging.info(f"[DEBUG] Project {proj.get('name')}: parsing as comma-separated (not JSON)")
-                    responsible_list = [r.strip() for r in responsible_data.split(',') if r.strip()]
-                
-                # Ensure it's a list
-                if not isinstance(responsible_list, list):
-                    responsible_list = [responsible_list]
-                
-                # Check if the user's username is in the list
-                if username in responsible_list:
-                    logging.info(f"[DEBUG] Project {proj.get('name')} (ID {proj.get('id')}): user '{username}' found in responsible list")
-                    projects.append(proj)
-                else:
-                    logging.info(f"[DEBUG] Project {proj.get('name')} (ID {proj.get('id')}): user '{username}' NOT in responsible list {responsible_list}")
-            except Exception as e:
-                logging.error(f"Error parsing responsible for project {proj.get('id')}: {str(e)}")
-                continue
-        
-        logging.info(f"[DEBUG] Filtered to {len(projects)} projects for user '{username}'")
         # Fetch task counts per ticket
-        cursor = conn.cursor()
         cursor.execute("""
             SELECT ticket_internal_code, COUNT(*) as task_count
-            FROM [DT_request].[dbo].[tasks]
+            FROM tasks
             WHERE ticket_internal_code IS NOT NULL
             GROUP BY ticket_internal_code
         """)
@@ -3012,32 +2879,44 @@ def tasks():
 
         conn.close()
 
-        # Combine all tickets
-        tickets = software_tickets + automation_tickets
-
         # Format dates for JSON
-        for task in software_tasks + automation_tasks:
-            task['start_date'] = task['start_date'].strftime('%Y-%m-%d') if task['start_date'] else None
-            task['end_date'] = task['end_date'].strftime('%Y-%m-%d') if task['end_date'] else None
-            task['planned_start_date'] = task['planned_start_date'].strftime('%Y-%m-%d') if task['planned_start_date'] else None
-            task['planned_end_date'] = task['planned_end_date'].strftime('%Y-%m-%d') if task['planned_end_date'] else None
-            task['estimated_hours'] = float(task['estimated_hours']) if task['estimated_hours'] is not None else None
-            task['time_spent'] = float(task['time_spent']) if task['time_spent'] is not None else None
+        def format_date(val):
+            if val is None:
+                return None
+            if hasattr(val, 'strftime'):
+                return val.strftime('%Y-%m-%d')
+            return str(val) if val else None
+
+        def format_field(val, default=None):
+            if val is None:
+                return default
+            if hasattr(val, 'strftime'):
+                return val.strftime('%Y-%m-%d')
+            return str(val) if val else default
+
+        for task in all_tasks:
+            task['start_date'] = format_date(task.get('start_date'))
+            task['end_date'] = format_date(task.get('end_date'))
+            task['planned_start_date'] = format_date(task.get('planned_start_date'))
+            task['planned_end_date'] = format_date(task.get('planned_end_date'))
+            task['estimated_hours'] = float(task['estimated_hours']) if task.get('estimated_hours') is not None else None
+            task['time_spent'] = float(task['time_spent']) if task.get('time_spent') is not None else None
+            task['week_number'] = format_field(task.get('week_number'), '')
+            task['priority'] = format_field(task.get('priority'), 'Medium')
+            task['responsible'] = format_field(task.get('responsible'), '')
 
         for ticket in tickets:
-            ticket['start_date'] = ticket['start_date'].strftime('%Y-%m-%d') if ticket['start_date'] else None
-            ticket['end_date'] = ticket['end_date'].strftime('%Y-%m-%d') if ticket['end_date'] else None
-            ticket['expected_date'] = ticket['expected_date'].strftime('%Y-%m-%d') if ticket['expected_date'] else None
-            ticket['category'] = 'Software' if ticket['table_name'] in ['software_issue', 'new_application', 'software_internal_reports'] else 'Automation'
-            ticket['time'] = ticket['time'] if ticket['time'] is not None else 0
+            ticket['start_date'] = format_date(ticket.get('start_date'))
+            ticket['end_date'] = format_date(ticket.get('end_date'))
+            ticket['expected_date'] = format_date(ticket.get('expected_date'))
+            ticket['category'] = 'maintenance_requests'
+            ticket['time'] = ticket['time'] if ticket.get('time') is not None else 0
             ticket['task_count'] = task_counts.get(ticket['internal_code'], 0)
 
         return render_template('tasks.html',
-                             software_tasks=software_tasks,
-                             automation_tasks=automation_tasks,
+                             all_tasks=all_tasks,
                              tickets=tickets,
-                             projects=projects,
-                             user_category=user_category)
+                             projects=projects)
     except Exception as e:
         print(f"ERROR in tasks route: {str(e)}")
         flash(f"Error fetching tasks or tickets: {str(e)}", 'error')
@@ -3058,7 +2937,7 @@ def profile():
 
     conn = connect()
     cursor = conn.cursor()
-    cursor.execute("SELECT username, name, email, github_username FROM users WHERE username = ?", (username,))
+    cursor.execute("SELECT username, name, email FROM users WHERE username = ?", (username,))
     row = cursor.fetchone()
     if not row:
         cursor.close()
@@ -3068,59 +2947,11 @@ def profile():
     user_data = {
         'username': row[0],
         'name': row[1],
-        'email': row[2],
-        'github_username': row[3]
+        'email': row[2]
     }
     cursor.close()
     conn.close()
     return render_template('profile.html', **user_data)
-
-
-@app.route('/api/github/repos')
-def list_github_repos():
-    """List repositórios do utilizador (autenticado via token)"""
-    token = os.getenv('GITHUB_TOKEN')
-    logging.info(f"[DEBUG] GITHUB_TOKEN is set: {'YES' if token else 'NO'}")
-    if token:
-        logging.info(f"[DEBUG] Token prefix: {token[:10]}... length: {len(token)}")
-    else:
-        logging.error("[DEBUG] GITHUB_TOKEN is NOT set!")
-        return jsonify({'success': False, 'message': 'GitHub token not configured on server'}), 500
-
-    import requests
-    url = "https://api.github.com/user/repos"
-    headers = {"Authorization": f"token {token}"}
-    params = {"per_page": 100}
-
-    try:
-        logging.info(f"[DEBUG] Requesting {url} with params {params}")
-        resp = requests.get(url, headers=headers, params=params, timeout=10)
-        logging.info(f"[DEBUG] GitHub API responded: {resp.status_code}")
-        if resp.status_code == 200:
-            repos = resp.json()
-            simplified = [
-                {
-                    'full_name': r['full_name'],
-                    'name': r['name'],
-                    'owner': r['owner']['login'],
-                    'private': r['private']
-                }
-                for r in repos
-            ]
-            logging.info(f"[DEBUG] Returning {len(simplified)} repos")
-            return jsonify({'success': True, 'repos': simplified})
-        else:
-            logging.error(f"GitHub API error listing repos: {resp.status_code} - {resp.text}")
-            return jsonify({'success': False, 'message': f'GitHub API error: {resp.status_code}', 'details': resp.text}), resp.status_code
-    except requests.exceptions.Timeout:
-        logging.error("Timeout connecting to GitHub API")
-        return jsonify({'success': False, 'message': 'Timeout connecting to GitHub'}), 504
-    except requests.exceptions.ConnectionError as e:
-        logging.error(f"Connection error: {str(e)}")
-        return jsonify({'success': False, 'message': 'Cannot connect to GitHub API'}), 503
-    except Exception as e:
-        logging.error(f"Error listing GitHub repos: {str(e)}", exc_info=True)
-        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @app.route('/export/completed_automation_tickets')
@@ -3197,50 +3028,33 @@ def export_completed_automation_tickets():
 
         results = []
 
-        # 1. Buscar todos os completed requests usando o mesmo stored procedure da página
+        # 1. Buscar todos os completed requests da maintenance_requests
         try:
-            cursor.execute('Exec GetAllCompletedRequests')
+            cursor.execute("""
+                SELECT internal_code, title, requester, requester_name, line as prod_line, equipment as n_sap,
+                       description, responsible, responsible_name, status, notes, observations,
+                       expected_date, completion_datetime, time_spent, created_at, type as category
+                FROM maintenance_requests
+                WHERE status = 2 AND is_deleted = 0
+                ORDER BY created_at DESC
+            """)
             rows = cursor.fetchall()
             columns = [desc[0] for desc in cursor.description]
             all_requests = [dict(zip(columns, row)) for row in rows]
 
-            # Adicionar campo 'type' baseado no internal_code
+            # Adicionar campo 'type' baseado no category
+            type_labels = {
+                'MTSE': 'Segurança',
+                'MTQA': 'Qualidade',
+                'MTEX': 'Excelência Operacional',
+                'MTREP': 'Reparações Eletrónicas'
+            }
             for r in all_requests:
-                code = r.get('internal_code', '')
-                if code.startswith('DTAI'):
-                    r['type'] = 'Automation Improvement'
-                elif code.startswith('DTAS'):
-                    r['type'] = 'Automation Support'
-                elif code.startswith('DTNA'):
-                    r['type'] = 'New Platform Software Development'
-                elif code.startswith('DTSI'):
-                    r['type'] = 'Platform Software Improvement'
-                else:
-                    r['type'] = 'Other'
+                cat = r.get('category', '')
+                r['type'] = type_labels.get(cat, 'Other')
             results.extend(all_requests)
         except Exception as e:
-            logging.error(f"Error fetching GetAllCompletedRequests: {str(e)}")
-
-        # 2. Buscar DTIR separadamente (status = 2)
-        try:
-            cursor.execute("""
-                SELECT
-                    internal_code, title, requester, reporter, start_date, end_date,
-                    time, responsible, observations, status
-                FROM software_internal_reports
-                WHERE status = 2 AND is_deleted = 0
-            """)
-            rows = cursor.fetchall()
-            columns = [desc[0] for desc in cursor.description]
-            dtir_requests = [dict(zip(columns, row)) for row in rows]
-            for r in dtir_requests:
-                r['type'] = 'Software Internal Report'
-            results.extend(dtir_requests)
-        except Exception as e:
-            logging.error(f"Error fetching DTIR: {str(e)}")
-
-        # Filtrar apenas tickets com status = 2 (Done/Completed)
-        results = [r for r in results if r.get('status') == 2]
+            logging.error(f"Error fetching completed requests: {str(e)}")
 
         cursor.close()
         conn.close()
@@ -3265,11 +3079,10 @@ def export_completed_automation_tickets():
                     logging.warning(f"Invalid date_fim format: {date_fim}: {e}")
 
             type_map = {
-                'DTAI': 'Automation Improvement',
-                'DTAS': 'Automation Support',
-                'DTNA': 'New Platform Software Development',
-                'DTSI': 'Platform Software Improvement',
-                'DTIR': 'Software Internal Report'
+                'MTSE': 'Segurança',
+                'MTQA': 'Qualidade',
+                'MTEX': 'Excelência Operacional',
+                'MTREP': 'Reparações Eletrónicas'
             }
 
             for r in normalized_results:
@@ -3411,8 +3224,6 @@ def add_task():
         week_number = data.get('week_number', '')
         title = data.get('title', 'New Task')
         description = data.get('description', '')
-        equipment = data.get('equipment', '') or ''
-        equipment_responsible = data.get('equipment_responsible', '') or ''
         time_spent = data.get('time_spent', 0)
         estimated_hours = data.get('estimated_hours', None)
         status = data.get('status', 'To Do')
@@ -3430,8 +3241,6 @@ def add_task():
         priority = 'Medium'
 
         # Validate required fields
-        if not category or category not in ['Software', 'Automation']:
-            return jsonify({'success': False, 'message': 'Invalid or missing category'}), 400
         if status not in ['To Do', 'In Progress', 'Done', 'Standby']:
             return jsonify({'success': False, 'message': 'Invalid status'}), 400
 
@@ -3457,8 +3266,6 @@ def add_task():
             return jsonify({'success': False, 'message': 'Description exceeds 2000 characters'}), 400
         if len(title) > 255:
             return jsonify({'success': False, 'message': 'Title exceeds 255 characters'}), 400
-        if len(equipment) > 100:
-            return jsonify({'success': False, 'message': 'Equipment exceeds 100 characters'}), 400
 
         # Parse week_number
         week_num = None
@@ -3554,23 +3361,19 @@ def add_task():
 
         # Query corrigida com schema completo e apenas as colunas que existem
         query = """
-            INSERT INTO [DT_request].[dbo].[tasks] (
-                category, week_number, title, description, responsible, equipment,
-                equipment_responsible, priority, status, start_date, end_date, 
+            INSERT INTO tasks (
+                week_number, title, description, responsible, priority, status, start_date, end_date, 
                 planned_start_date, planned_end_date, ticket_internal_code, ticket_table, 
                 time_spent, estimated_hours, project_id, task_type, created_by, created_at, updated_at,
                 is_principal_task, principal_task_id
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE(), ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE(), ?, ?)
         """
         params = (
-            category,
             week_num,
             title,
             description,
-            responsible_str,  # Use formatted string with semicolon separator
-            equipment,
-            equipment_responsible,
+            responsible_str,
             priority,
             status,
             start_date_obj,
@@ -3594,59 +3397,13 @@ def add_task():
         cursor.execute("SELECT @@IDENTITY AS id")
         task_id = cursor.fetchone().id
 
-        issue_number = None
-
-        # Se task está associada a projeto com github_repo, criar Issue obrigatoriamente
-        if project_id:
-            try:
-                github_repo = get_project_github_repo(cursor, project_id)
-                logging.info(f"[DEBUG] add_task - Task {task_id} - Project {project_id} - github_repo: {github_repo}")
-
-                if github_repo:
-                    cursor.execute("SELECT responsible FROM projects WHERE id = ?", (project_id,))
-                    proj_resp = cursor.fetchone()
-                    responsible_json = proj_resp[0] if proj_resp else None
-
-                    assignees = []
-                    if responsible_json:
-                        assignees = get_user_github_usernames(responsible_json, cursor)
-
-                    issue_number = create_issue(
-                        repo=github_repo,
-                        title=title,
-                        description=description,
-                        assignees=assignees
-                    )
-
-                    if issue_number:
-                        cursor.execute("UPDATE tasks SET github_issue_number = ? WHERE id = ?", (issue_number, task_id))
-                        logging.info(f"GitHub Issue #{issue_number} criada automaticamente para tarefa {task_id}")
-                    else:
-                        conn.rollback()
-                        cursor.close()
-                        conn.close()
-                        return jsonify({
-                            'success': False,
-                            'message': 'Task not created because GitHub Issue creation failed for project repository'
-                        }), 500
-            except Exception as e:
-                conn.rollback()
-                cursor.close()
-                conn.close()
-                logging.error(f"Erro ao criar GitHub Issue automática para tarefa {task_id}: {str(e)}", exc_info=True)
-                return jsonify({
-                    'success': False,
-                    'message': 'Task not created because GitHub Issue creation failed for project repository'
-                }), 500
-
         conn.commit()
 
         # Fetch the complete task data to return to frontend
         cursor.execute("""
-            SELECT id, category, week_number, title, description, responsible, equipment,
-                   equipment_responsible, priority, status, start_date, end_date,
-                   planned_start_date, planned_end_date, ticket_internal_code, ticket_table,
-                   time_spent, estimated_hours, project_id, task_type, is_principal_task,
+            SELECT id, week_number, title, description, responsible, priority, status, 
+                   start_date, end_date, planned_start_date, planned_end_date, ticket_internal_code, 
+                   ticket_table, time_spent, estimated_hours, project_id, task_type, is_principal_task,
                    principal_task_id, created_by, created_at, updated_at
             FROM tasks
             WHERE id = ?
@@ -3687,7 +3444,7 @@ def update_task(task_id):
         fields = [
             'week_number', 'title', 'description', 'responsible', 'priority', 'status',
             'start_date', 'end_date', 'planned_start_date', 'planned_end_date', 
-            'time_spent', 'equipment', 'equipment_responsible', 'estimated_hours'
+            'time_spent', 'estimated_hours'
         ]
         updates = {field: data.get(field) for field in fields}
 
@@ -3729,14 +3486,13 @@ def update_task(task_id):
             UPDATE tasks
             SET week_number = ?, title = ?, description = ?, responsible = ?, priority = ?, 
                 status = ?, start_date = ?, end_date = ?, planned_start_date = ?, 
-                planned_end_date = ?, time_spent = ?, equipment = ?, 
-                equipment_responsible = ?, estimated_hours = ?, updated_at = GETDATE()
+                planned_end_date = ?, time_spent = ?, estimated_hours = ?, updated_at = GETDATE()
             WHERE id = ?
         """, (
             updates['week_number'], updates['title'], updates['description'], updates['responsible'],
             updates['priority'], updates['status'], updates['start_date'], updates['end_date'],
             updates['planned_start_date'], updates['planned_end_date'], updates['time_spent'],
-            updates['equipment'], updates['equipment_responsible'], updates['estimated_hours'], task_id
+            updates['estimated_hours'], task_id
         ))
 
         if cursor.rowcount == 0:
@@ -3754,17 +3510,8 @@ def update_task(task_id):
             }
             ticket_status = status_mapping.get(new_status)
             if ticket_status is not None:
-                # Determinar a tabela correta baseada no código do ticket
-                if current_ticket_code.startswith('DTAI'):
-                    table_name = 'automation_improvement'
-                elif current_ticket_code.startswith('DTAS'):
-                    table_name = 'automation_support'
-                elif current_ticket_code.startswith('DTNA'):
-                    table_name = 'new_application'
-                elif current_ticket_code.startswith('DTSI'):
-                    table_name = 'software_issue'
-                elif current_ticket_code.startswith('DTIR'):
-                    table_name = 'software_internal_reports'
+                if current_ticket_code.startswith('MTSE') or current_ticket_code.startswith('MTQA') or current_ticket_code.startswith('MTEX') or current_ticket_code.startswith('MTREP'):
+                    table_name = 'maintenance_requests'
                 else:
                     table_name = None
                 
@@ -3773,7 +3520,7 @@ def update_task(task_id):
                         cursor.execute(f"""
                             UPDATE {table_name}
                             SET status = ?
-                            WHERE internal_code = ? AND approved = 1
+                            WHERE internal_code = ?
                         """, (ticket_status, current_ticket_code))
                         # Buscar nome do responsável
                         cursor.execute("SELECT name FROM users WHERE username = ?", (updates['responsible'],))
@@ -3819,29 +3566,6 @@ def update_task(task_id):
 
         conn.commit()
 
-        # Se a tarefa é principal e o status mudou para 'Done', verificar se há Issue para fechar
-        if is_principal_task == 1 and new_status == 'Done' and old_status != 'Done':
-            cursor.execute("SELECT github_issue_number FROM tasks WHERE id = ?", (task_id,))
-            task_row = cursor.fetchone()
-            issue_number = task_row[0] if task_row else None
-
-            if issue_number:
-                # Buscar github_repo do projeto associado
-                cursor.execute("""
-                    SELECT p.github_repo
-                    FROM projects p
-                    WHERE p.id = (SELECT project_id FROM tasks WHERE id = ?)
-                """, (task_id,))
-                repo_row = cursor.fetchone()
-                github_repo = repo_row[0] if repo_row else None
-
-                if github_repo:
-                    try:
-                        close_issue(github_repo, issue_number)
-                        logging.info(f"GitHub Issue #{issue_number} fechada (tarefa {task_id} concluída)")
-                    except Exception as e:
-                        logging.error(f"Erro ao fechar GitHub Issue #{issue_number}: {str(e)}")
-
         cursor.close()
         conn.close()
 
@@ -3853,7 +3577,7 @@ def update_task(task_id):
             cursor = conn.cursor()
             cursor.execute("""
                 SELECT id, title, status FROM tasks 
-                WHERE principal_task_id = ? OR (is_principal_task = 1 AND id = ?)
+                WHERE (principal_task_id = ? OR (is_principal_task = 1 AND id = ?)) AND is_deleted = 0
                 ORDER BY created_at ASC
             """, (task_id, task_id))
             rows = cursor.fetchall()
@@ -3981,15 +3705,8 @@ def complete_principal_task(task_id):
         
         # If there's a ticket, update its status to Done (2)
         if ticket_code and ticket_table:
-            # Determine correct table name
-            if ticket_code.startswith('DTAI'):
-                table_name = 'automation_improvement'
-            elif ticket_code.startswith('DTAS'):
-                table_name = 'automation_support'
-            elif ticket_code.startswith('DTNA'):
-                table_name = 'new_application'
-            elif ticket_code.startswith('DTSI'):
-                table_name = 'software_issue'
+            if ticket_code.startswith('MTSE') or ticket_code.startswith('MTQA') or ticket_code.startswith('MTEX') or ticket_code.startswith('MTREP'):
+                table_name = 'maintenance_requests'
             else:
                 table_name = None
             
@@ -3998,7 +3715,7 @@ def complete_principal_task(task_id):
                     cursor.execute(f"""
                         UPDATE {table_name}
                         SET status = 2
-                        WHERE internal_code = ? AND approved = 1
+                        WHERE internal_code = ?
                     """, (ticket_code,))
                 except Exception as e:
                     logging.error(f"Error updating ticket status: {str(e)}")
@@ -4024,24 +3741,9 @@ def delete_task(task_id):
         conn = connect()
         cursor = conn.cursor()
 
-        # Fetch task to get category (no responsible check)
-        cursor.execute("""
-            SELECT category
-            FROM [DT_request].[dbo].[tasks]
-            WHERE id = ?
-        """, (task_id,))
-        
-        task = cursor.fetchone()
-        if not task:
-            cursor.close()
-            conn.close()
-            return jsonify(success=False, message=f"Task with ID {task_id} not found"), 404
-
-        category = task[0]
-
         # Delete the task
         cursor.execute("""
-            DELETE FROM [DT_request].[dbo].[tasks]
+            DELETE FROM tasks
             WHERE id = ?
         """, (task_id,))
 
@@ -4054,7 +3756,7 @@ def delete_task(task_id):
         cursor.close()
         conn.close()
 
-        return jsonify(success=True, category=category)
+        return jsonify(success=True)
 
     except pyodbc.Error as e:
         if 'conn' in locals():
@@ -4079,11 +3781,11 @@ def get_task(task_id):
         conn = connect()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, category, title, description, responsible, priority, status, start_date, end_date,
-                   week_number, ticket_internal_code, ticket_table, created_at, updated_at, equipment,
-                   equipment_responsible, time_spent, planned_start_date, planned_end_date, project_id, 
+            SELECT id, title, description, responsible, priority, status, start_date, end_date,
+                   week_number, ticket_internal_code, ticket_table, created_at, updated_at,
+                   time_spent, planned_start_date, planned_end_date, project_id, 
                    comments, estimated_hours
-            FROM [DT_request].[dbo].[tasks]
+            FROM tasks
             WHERE id = ?
         """, (task_id,))
         row = cursor.fetchone()
@@ -4128,7 +3830,7 @@ def update_task_comment(task_id):
         # Primeiro, buscar informações da task, incluindo ticket associado
         cursor.execute("""
             SELECT ticket_internal_code, ticket_table, status, title
-            FROM [DT_request].[dbo].[tasks]
+            FROM tasks
             WHERE id = ?
         """, (task_id,))
         task_info = cursor.fetchone()
@@ -4142,7 +3844,7 @@ def update_task_comment(task_id):
         
         # Atualizar o comment da task
         cursor.execute("""
-            UPDATE [DT_request].[dbo].[tasks]
+            UPDATE tasks
             SET comments = ?, updated_at = GETDATE()
             WHERE id = ?
         """, (comment, task_id))
@@ -4231,26 +3933,39 @@ def update_ticket_status():
         conn = connect()
         cursor = conn.cursor()
         
-        # Map table names to actual table names
-        table_mapping = {
-            'automation_improvement': 'automation_improvement',
-            'automation_support': 'automation_support',
-            'new_application': 'new_application',
-            'software_issue': 'software_issue',
-            'software_internal_reports': 'software_internal_reports'
-        }
-
-        actual_table = table_mapping.get(ticket_table)
-        if not actual_table:
-            return jsonify(success=False, message="Invalid ticket table"), 400
+        if ticket_table == 'maintenance_requests' or ticket_code.startswith('MTSE') or ticket_code.startswith('MTQA') or ticket_code.startswith('MTEX') or ticket_code.startswith('MTREP'):
+            actual_table = 'maintenance_requests'
+        else:
+            table_mapping = {
+                'automation_improvement': 'automation_improvement',
+                'automation_support': 'automation_support',
+                'new_application': 'new_application',
+                'software_issue': 'software_issue',
+                'software_internal_reports': 'software_internal_reports'
+            }
+            actual_table = table_mapping.get(ticket_table)
+            if not actual_table:
+                return jsonify(success=False, message="Invalid ticket table"), 400
             
-        # Get additional data from request if available
         start_date = data.get('start_date')
         end_date = data.get('end_date')
         
-        # Update ticket status and related fields based on table type
-        if actual_table == 'automation_support':
-            # Para DTAS, observations vai para observations_dt
+        if actual_table == 'maintenance_requests':
+            if start_date and end_date:
+                update_query = """
+                    UPDATE maintenance_requests
+                    SET status = ?, observations = ?, time_spent = ?, start_date = ?, end_date = ?, updated_at = GETDATE()
+                    WHERE internal_code = ?
+                """
+                cursor.execute(update_query, (status, observations, time_spent, start_date, end_date, ticket_code))
+            else:
+                update_query = """
+                    UPDATE maintenance_requests
+                    SET status = ?, observations = ?, time_spent = ?, updated_at = GETDATE()
+                    WHERE internal_code = ?
+                """
+                cursor.execute(update_query, (status, observations, time_spent, ticket_code))
+        elif actual_table == 'automation_support':
             if start_date and end_date:
                 update_query = f"""
                     UPDATE [DT_request].[dbo].[{actual_table}]
@@ -4266,7 +3981,6 @@ def update_ticket_status():
                 """
                 cursor.execute(update_query, (status, observations, time_spent, ticket_code))
         else:
-            # Para DTAI, DTNA, DTSI, observations vai para observations
             if start_date and end_date:
                 update_query = f"""
                     UPDATE [DT_request].[dbo].[{actual_table}]
@@ -4320,7 +4034,18 @@ def get_ticket_data(internal_code):
         ticket_data = None
         table_name = None
         
-        if internal_code.startswith('DTSI'):
+        if internal_code.startswith('MTSE') or internal_code.startswith('MTQA') or internal_code.startswith('MTEX') or internal_code.startswith('MTREP'):
+            table_name = 'maintenance_requests'
+            cursor.execute("""
+                SELECT internal_code, title, description, status, expected_date,
+                       line as prod_line, equipment as n_sap,
+                       observations, time_spent as time, responsible, requester, type as category,
+                       created_at, updated_at, approved, notes
+                FROM maintenance_requests
+                WHERE internal_code = ? AND is_deleted = 0
+            """, (internal_code,))
+            
+        elif internal_code.startswith('DTSI'):
             table_name = 'software_issue'
             cursor.execute("""
                 SELECT internal_code, title, issue as description, status, expected_date, 
@@ -4367,7 +4092,6 @@ def get_ticket_data(internal_code):
 
         elif internal_code.startswith('DTIR'):
             table_name = 'software_internal_reports'
-            # Ensure priority column exists in software_internal_reports table
             try:
                 cursor.execute("""
                     IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'priority' AND Object_ID = Object_ID(N'software_internal_reports'))
@@ -4404,7 +4128,9 @@ def get_ticket_data(internal_code):
         if ticket_dict.get('start_date') or ticket_dict.get('expected_date'):
             date_to_use = ticket_dict.get('start_date') or ticket_dict.get('expected_date')
             if date_to_use:
-                if isinstance(date_to_use, datetime):
+                if isinstance(date_to_use, str):
+                    date_to_use = datetime.strptime(date_to_use, '%Y-%m-%d')
+                elif isinstance(date_to_use, datetime):
                     date_to_use = date_to_use.date()
                 week_number = date_to_use.isocalendar()[1]
 
@@ -4434,14 +4160,21 @@ def get_ticket_data(internal_code):
         
         full_description = full_description[:2000] if full_description else ''
 
+        def format_date(val):
+            if val is None:
+                return None
+            if hasattr(val, 'strftime'):
+                return val.strftime('%Y-%m-%d')
+            return str(val) if val else None
+
         response_data = {
             'internal_code': ticket_dict['internal_code'],
             'title': ticket_dict.get('title', 'New Task'),
             'description': full_description,
             'status': mapped_status,
-            'start_date': ticket_dict['start_date'].strftime('%Y-%m-%d') if ticket_dict.get('start_date') else None,
-            'end_date': ticket_dict['end_date'].strftime('%Y-%m-%d') if ticket_dict.get('end_date') else None,
-            'expected_date': ticket_dict['expected_date'].strftime('%Y-%m-%d') if ticket_dict.get('expected_date') else None,
+            'start_date': format_date(ticket_dict.get('start_date')),
+            'end_date': format_date(ticket_dict.get('end_date')),
+            'expected_date': format_date(ticket_dict.get('expected_date')),
             'week_number': week_number,
             'table_name': table_name,
             'equipment': ticket_dict.get('n_sap', '') if table_name in ['automation_support', 'automation_improvement'] else '',
@@ -4467,7 +4200,6 @@ def update_ticket(internal_code):
             return jsonify({'success': False, 'message': 'Not authenticated'}), 401
 
         data = request.get_json()
-        table_name = data.get('table_name')
         responsible = data.get('responsible')
         status = data.get('status')
 
@@ -4481,34 +4213,28 @@ def update_ticket(internal_code):
         if ticket_status is None:
             return jsonify({'success': False, 'message': 'Invalid status'}), 400
 
-        valid_tables = ['software_issue', 'new_application', 'automation_support', 'automation_improvement']
-        if table_name not in valid_tables:
-            return jsonify({'success': False, 'message': 'Invalid table name'}), 400
+        if not (internal_code.startswith('MTSE') or internal_code.startswith('MTQA') or internal_code.startswith('MTEX') or internal_code.startswith('MTREP')):
+            return jsonify({'success': False, 'message': 'Invalid ticket code'}), 400
 
         conn = connect()
         cursor = conn.cursor()
 
-        # Buscar status atual antes de atualizar
-        cursor.execute(f"SELECT status FROM [DT_request].[dbo].[{table_name}] WHERE internal_code = ?", (internal_code,))
+        cursor.execute("SELECT status FROM maintenance_requests WHERE internal_code = ?", (internal_code,))
         current_status_row = cursor.fetchone()
         current_status = current_status_row[0] if current_status_row else None
 
-        # Atualizar ticket
-        query = f"""
-            UPDATE [DT_request].[dbo].[{table_name}]
+        cursor.execute("""
+            UPDATE maintenance_requests
             SET responsible = ?, status = ?, updated_at = GETDATE()
-            WHERE internal_code = ? AND approved = 1
-        """
-        cursor.execute(query, (responsible, ticket_status, internal_code))
+            WHERE internal_code = ?
+        """, (responsible, ticket_status, internal_code))
 
         if cursor.rowcount == 0:
             cursor.close()
             conn.close()
-            return jsonify({'success': False, 'message': 'Ticket not found or not approved'}), 404
+            return jsonify({'success': False, 'message': 'Ticket not found'}), 404
 
-        # Só envia e-mail se o status mudou
         if current_status != ticket_status:
-            # Buscar nome do responsável
             responsible_name = None
             if responsible:
                 cursor.execute("SELECT name FROM users WHERE username = ?", (responsible,))
@@ -4516,8 +4242,7 @@ def update_ticket(internal_code):
                 if row_resp:
                     responsible_name = row_resp[0]
 
-            # Buscar expected_date e notes
-            cursor.execute(f"SELECT expected_date, notes FROM [DT_request].[dbo].[{table_name}] WHERE internal_code = ?", (internal_code,))
+            cursor.execute("SELECT expected_date, notes FROM maintenance_requests WHERE internal_code = ?", (internal_code,))
             row_date_notes = cursor.fetchone()
             expected_date_fmt = ''
             notes = ''
@@ -4529,11 +4254,10 @@ def update_ticket(internal_code):
                         expected_date_fmt = str(row_date_notes[0])
                 notes = row_date_notes[1] if row_date_notes[1] else ''
 
-            # Buscar email do requester
-            cursor.execute(f"""
+            cursor.execute("""
                 SELECT u.email, u.name, t.title
                 FROM users u
-                JOIN [DT_request].[dbo].[{table_name}] t ON (u.name = t.requester OR u.username = t.requester)
+                JOIN maintenance_requests t ON (u.name = t.requester OR u.username = t.requester)
                 WHERE t.internal_code = ?
             """, (internal_code,))
             row = cursor.fetchone()
@@ -4577,8 +4301,7 @@ def get_responsible_users():
 
         cursor.execute("""
             SELECT username
-            FROM [DT_request].[dbo].[users]
-            WHERE role = 1
+            FROM users
             ORDER BY username
         """)
         
@@ -4618,8 +4341,9 @@ def projects():
         conn = connect()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT id, name, description, category, created_by, created_at, updated_at, status, responsible, total_hours, github_repo
-            FROM [DT_request].[dbo].[projects]
+            SELECT id, name, description, created_by, created_at, updated_at, responsible
+            FROM projects
+            WHERE is_deleted = 0
             ORDER BY created_at DESC
         """)
         projects_list = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
@@ -4631,7 +4355,7 @@ def projects():
             cursor.execute("""
                 SELECT SUM(ISNULL(estimated_hours, 0)) as total_estimated,
                        SUM(CASE WHEN status IN ('Done', 'Completed') THEN ISNULL(estimated_hours, 0) ELSE 0 END) as completed_hours
-                FROM [DT_request].[dbo].[tasks]
+                FROM tasks
                 WHERE project_id = ?
             """, (project_id,))
             hours_data = cursor.fetchone()
@@ -4668,7 +4392,7 @@ def projects():
                        start_date, end_date,
                        planned_start_date, planned_end_date,
                        description
-                FROM [DT_request].[dbo].[tasks]
+                FROM tasks
                 WHERE project_id = ?
                 ORDER BY COALESCE(planned_start_date, start_date, planned_end_date, end_date)
             """, (project['id'],))
@@ -4706,29 +4430,23 @@ def add_project():
     try:
         data = request.get_json()
         name = data.get('name')
-        category = data.get('category')
         description = data.get('description')
         responsible = data.get('responsible', [])
-        total_hours = data.get('total_hours', 0)
-        github_repo = data.get('github_repo')  # optional
         created_by = session.get('username', 'Unassigned')
 
-        if not name or not category:
-            return jsonify({'success': False, 'message': 'Name and category required'}), 400
+        if not name:
+            return jsonify({'success': False, 'message': 'Nome do projeto é obrigatório'}), 400
 
         # Convert responsible list to JSON string
         import json
         responsible_json = json.dumps(responsible) if responsible else json.dumps([created_by])
 
-        # Set default status based on category
-        default_status = 'Waiting'
-
         conn = connect()
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO [DT_request].[dbo].[projects] (name, category, description, created_by, status, responsible, total_hours, github_repo)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (name, category, description, created_by, default_status, responsible_json, total_hours, github_repo))
+            INSERT INTO projects (name, description, created_by, responsible)
+            VALUES (?, ?, ?, ?)
+        """, (name, description, created_by, responsible_json))
         conn.commit()
         cursor.close()
         conn.close()
@@ -4745,15 +4463,11 @@ def edit_project(project_id):
 
         data = request.get_json()
         name = data.get('name')
-        category = data.get('category')
         description = data.get('description')
-        status = data.get('status')
         responsible = data.get('responsible', [])
-        total_hours = data.get('total_hours', 0)
-        github_repo = data.get('github_repo')  # optional
 
-        if not name or not category:
-            return jsonify({'success': False, 'message': 'Name and category required'}), 400
+        if not name:
+            return jsonify({'success': False, 'message': 'Nome do projeto é obrigatório'}), 400
 
         # Convert responsible list to JSON string
         import json
@@ -4762,10 +4476,10 @@ def edit_project(project_id):
         conn = connect()
         cursor = conn.cursor()
         cursor.execute("""
-            UPDATE [DT_request].[dbo].[projects]
-            SET name = ?, category = ?, description = ?, status = ?, responsible = ?, total_hours = ?, github_repo = ?, updated_at = GETDATE()
+            UPDATE projects
+            SET name = ?, description = ?, responsible = ?, updated_at = GETDATE()
             WHERE id = ?
-        """, (name, category, description, status, responsible_json, total_hours, github_repo, project_id))
+        """, (name, description, responsible_json, project_id))
         conn.commit()
         cursor.close()
         conn.close()
@@ -4782,35 +4496,8 @@ def delete_project(project_id):
 
         conn = connect()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM [DT_request].[dbo].[tasks] WHERE project_id = ?", (project_id,))
-        cursor.execute("DELETE FROM [DT_request].[dbo].[projects] WHERE id = ?", (project_id,))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/projects/<int:project_id>/status', methods=['PUT'])
-def update_project_status(project_id):
-    try:
-        username = session.get('username')
-        if not username:
-            return jsonify({'success': False, 'message': 'Not authenticated'}), 401
-
-        data = request.get_json()
-        status = data.get('status')
-
-        if not status:
-            return jsonify({'success': False, 'message': 'Status required'}), 400
-
-        conn = connect()
-        cursor = conn.cursor()
-        cursor.execute("""
-            UPDATE [DT_request].[dbo].[projects]
-            SET status = ?, updated_at = GETDATE()
-            WHERE id = ?
-        """, (status, project_id))
+        cursor.execute("DELETE FROM tasks WHERE project_id = ?", (project_id,))
+        cursor.execute("UPDATE projects SET is_deleted = 1 WHERE id = ?", (project_id,))
         conn.commit()
         cursor.close()
         conn.close()
@@ -4828,8 +4515,7 @@ def project_tasks(project_id):
 
         conn = connect()
         cursor = conn.cursor()
-        # Buscar projeto
-        cursor.execute("SELECT id, name, description, category, status, responsible, total_hours, github_repo FROM [DT_request].[dbo].[projects] WHERE id = ?", (project_id,))
+        cursor.execute("SELECT id, name, description, responsible FROM projects WHERE id = ? AND is_deleted = 0", (project_id,))
         project = cursor.fetchone()
         if not project:
             flash('Project not found.', 'error')
@@ -4837,7 +4523,6 @@ def project_tasks(project_id):
 
         project_data = dict(zip([col[0] for col in cursor.description], project))
 
-        # Parse responsible field
         if project_data['responsible']:
             try:
                 import json
@@ -4848,52 +4533,39 @@ def project_tasks(project_id):
         else:
             project_data['responsible_list'] = []
 
-        # Buscar TODAS as tarefas associadas ao projeto
+        # Default category and status for project
+        project_data['category'] = 'Software'
+        project_data['status'] = 'Waiting'
+
         cursor.execute("""
-            SELECT t.id, t.category, t.title, t.description, t.responsible, t.priority, t.status,
-                   t.start_date, t.end_date, t.week_number, t.equipment, t.equipment_responsible,
-                   t.time_spent, t.planned_start_date, t.planned_end_date, t.estimated_hours,
-                   p.github_repo
-            FROM [DT_request].[dbo].[tasks] t
-            LEFT JOIN [DT_request].[dbo].[projects] p ON t.project_id = p.id
-            WHERE t.project_id = ?
-            ORDER BY t.planned_start_date, t.created_at DESC
+            SELECT id, week_number, title, description, responsible, priority, status,
+                   start_date, end_date, planned_start_date, planned_end_date,
+                   estimated_hours, time_spent, is_principal_task, principal_task_id,
+                   comments, ticket_internal_code, ticket_table
+            FROM tasks
+            WHERE project_id = ? AND is_deleted = 0
+            ORDER BY created_at DESC
         """, (project_id,))
         tasks_list = [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
 
-        # Calculate project progress
-        total_estimated = sum(t['estimated_hours'] or 0 for t in tasks_list)
-        completed_hours = sum((t['estimated_hours'] or 0) for t in tasks_list if t['status'] in ['Done', 'Completed'])
-        progress_percentage = (completed_hours / total_estimated * 100) if total_estimated > 0 else 0
-
-        project_data['progress_percentage'] = round(progress_percentage, 1)
-        project_data['total_estimated_hours'] = total_estimated
-        project_data['completed_hours'] = completed_hours
-
-        # Prepare timeline data
-        timeline_tasks = []
-        for task in tasks_list:
-            if task['planned_start_date'] or task['start_date']:
-                start_date = task['planned_start_date'] or task['start_date']
-                end_date = task['planned_end_date'] or task['end_date'] or start_date
-                timeline_tasks.append({
-                    'id': task['id'],
-                    'title': task['title'],
-                    'start': start_date.strftime('%Y-%m-%d') if hasattr(start_date, 'strftime') else str(start_date),
-                    'end': end_date.strftime('%Y-%m-%d') if hasattr(end_date, 'strftime') else str(end_date),
-                    'status': task['status'],
-                    'responsible': task['responsible'],
-                    'estimated_hours': task['estimated_hours'] or 0
-                })
+        for t in tasks_list:
+            for f in ['start_date', 'end_date', 'planned_start_date', 'planned_end_date']:
+                if t.get(f):
+                    t[f] = t[f].strftime('%Y-%m-%d') if hasattr(t[f], 'strftime') else str(t[f])
+                else:
+                    t[f] = None
+            # Format fields to avoid None strings
+            t['week_number'] = t.get('week_number') or ''
+            t['priority'] = t.get('priority') or 'Medium'
+            # Convert responsible string to array for frontend
+            resp_str = t.get('responsible') or ''
+            if resp_str:
+                t['responsible'] = [r.strip() for r in resp_str.split(',') if r.strip()]
+            else:
+                t['responsible'] = []
 
         cursor.close()
         conn.close()
-
-        # Formatação das datas
-        for t in tasks_list:
-            for f in ['start_date', 'end_date', 'planned_start_date', 'planned_end_date']:
-                t[f] = t[f].strftime('%Y-%m-%d') if t[f] else None
-            t['estimated_hours'] = t['estimated_hours'] if t['estimated_hours'] is not None else None
 
         return render_template('project_tasks.html', project=project_data, tasks=tasks_list)
     except Exception as e:
@@ -4909,221 +4581,127 @@ def add_project_task(project_id):
             return jsonify({'success': False, 'message': 'Not authenticated'}), 401
 
         data = request.get_json()
-        title = data.get('title', 'New Task')
+        title = data.get('title', 'Nova Tarefa')
         description = data.get('description', '')
-        category = data.get('category', 'Software')
+        priority = data.get('priority', 'Medium')
         status = data.get('status', 'To Do')
-        planned_start_date = data.get('planned_start_date', None)
-        planned_end_date = data.get('planned_end_date', None)
-        start_date = data.get('start_date', None)
-        end_date = data.get('end_date', None)
-        equipment = data.get('equipment', '')
-        equipment_responsible = data.get('equipment_responsible', '')
-        time_spent = data.get('time_spent', 0)
-        estimated_hours = data.get('estimated_hours', None)
-        responsible = data.get('responsible', [username])
-        responsible_str = format_responsible(responsible)
+        start_date = data.get('start_date') or None
+        end_date = data.get('end_date') or None
+        planned_start_date = data.get('planned_start_date') or None
+        planned_end_date = data.get('planned_end_date') or None
+        estimated_hours = data.get('estimated_hours')
+        time_spent = data.get('time_spent')
+        
+        # Handle responsible as either array or string
+        responsible_raw = data.get('responsible')
+        if isinstance(responsible_raw, list):
+            responsible = ','.join([r for r in responsible_raw if r]) if responsible_raw else username
+        else:
+            responsible = responsible_raw if responsible_raw else username
 
-        # Validar e formatar as datas
-        planned_start_date_obj = None
-        planned_end_date_obj = None
-        start_date_obj = None
-        end_date_obj = None
-        try:
-            if planned_start_date:
-                planned_start_date_obj = datetime.strptime(planned_start_date, '%Y-%m-%d').date()
-            if planned_end_date:
-                planned_end_date_obj = datetime.strptime(planned_end_date, '%Y-%m-%d').date()
-            if start_date:
-                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
-            if end_date:
-                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
-        except ValueError:
-            return jsonify({'success': False, 'message': 'Invalid date format'}), 400
-
-        # Calcula o week_number corretamente
-        week_number = None
-        if planned_start_date_obj or start_date_obj:
-            week_number = (planned_start_date_obj or start_date_obj).isocalendar()[1]
+        # Log for debugging
+        import logging
+        logging.info(f"add_project_task: title={title}, responsible={responsible}, priority={priority}")
 
         conn = connect()
         cursor = conn.cursor()
         
-        # Determinar se é principal task para o projeto
-        is_principal = 0
-        principal_task_id = None
-        
-        # Verificar se já existem tasks para este projeto
         cursor.execute("""
-            SELECT id, is_principal_task FROM tasks 
-            WHERE project_id = ? AND principal_task_id IS NULL
-            ORDER BY created_at ASC
-        """, (project_id,))
-        existing_tasks = cursor.fetchall()
+            INSERT INTO tasks (title, description, priority, responsible, status, 
+                               start_date, end_date, planned_start_date, planned_end_date,
+                               estimated_hours, time_spent, project_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE())
+        """, (title, description, priority, responsible, status, 
+              start_date, end_date, planned_start_date, planned_end_date,
+              estimated_hours, time_spent, project_id))
         
-        if not existing_tasks:
-            # É a primeira task para este projeto
-            is_principal = 1
-        else:
-            # Encontrar a principal task existente
-            for existing_task in existing_tasks:
-                if existing_task[1] == 1:  # is_principal_task = 1
-                    principal_task_id = existing_task[0]
-                    break
-        
-        cursor.execute("""
-            INSERT INTO [DT_request].[dbo].[tasks] 
-            (category, title, description, responsible, priority, status, start_date, end_date, 
-             planned_start_date, planned_end_date, equipment, equipment_responsible, time_spent, 
-             estimated_hours, project_id, week_number, created_at, updated_at, is_principal_task, principal_task_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), GETDATE(), ?, ?)
-        """, (
-            category, title, description, responsible_str, 'Medium', status,
-            start_date_obj, end_date_obj,
-            planned_start_date_obj, planned_end_date_obj,
-            equipment, equipment_responsible, time_spent, estimated_hours,
-            project_id, week_number, is_principal, principal_task_id
-        ))
         cursor.execute("SELECT @@IDENTITY AS id")
         task_id = cursor.fetchone().id
-
-        # Se projeto tem github_repo, criação de Issue é obrigatória
-        github_repo = get_project_github_repo(cursor, project_id)
-        logging.info(f"[DEBUG] Task {task_id} - Project {project_id} - github_repo: {github_repo}")
-
-        if github_repo:
-            try:
-                # Buscar assignees dos responsáveis do projeto
-                cursor.execute("SELECT responsible FROM projects WHERE id = ?", (project_id,))
-                proj_resp = cursor.fetchone()
-                responsible_json = proj_resp[0] if proj_resp else None
-                logging.info(f"[DEBUG] Project responsible JSON: {responsible_json}")
-
-                assignees = []
-                if responsible_json:
-                    assignees = get_user_github_usernames(responsible_json, cursor)
-                logging.info(f"[DEBUG] Assignees for GitHub Issue: {assignees}")
-
-                # Criar Issue
-                issue_number = create_issue(
-                    repo=github_repo,
-                    title=title,
-                    description=description,
-                    assignees=assignees
-                )
-                logging.info(f"[DEBUG] create_issue returned: {issue_number}")
-                if issue_number:
-                    # Guardar número da Issue na tarefa
-                    cursor.execute("UPDATE tasks SET github_issue_number = ? WHERE id = ?", (issue_number, task_id))
-                    logging.info(f"GitHub Issue #{issue_number} criada para tarefa {task_id}")
-                else:
-                    conn.rollback()
-                    cursor.close()
-                    conn.close()
-                    return jsonify({
-                        'success': False,
-                        'message': 'Task not created because GitHub Issue creation failed for project repository'
-                    }), 500
-            except Exception as e:
-                conn.rollback()
-                cursor.close()
-                conn.close()
-                logging.error(f"Erro ao criar GitHub Issue para tarefa {task_id}: {str(e)}", exc_info=True)
-                return jsonify({
-                    'success': False,
-                    'message': 'Task not created because GitHub Issue creation failed for project repository'
-                }), 500
-
         conn.commit()
-
         cursor.close()
         conn.close()
+        
         return jsonify({'success': True, 'task_id': task_id})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
-    
-    
-###################### DT PLANNING #################################
 
-@app.route('/planning')
-def planning():
+@app.route('/projects/<int:project_id>/tasks/update/<int:task_id>', methods=['PUT'])
+def update_project_task(project_id, task_id):
     try:
-        conn = connect()
-        cursor = conn.cursor()
+        username = session.get('username')
+        if not username:
+            return jsonify({'success': False, 'message': 'Not authenticated'}), 401
 
-        # Fetch Software (responsible for applications)
-        cursor.execute("""
-            SELECT id, application_name, responsible, notes
-            FROM [DT_request].[dbo].[planning]
-            WHERE category = 'software'
-            ORDER BY application_name ASC
-        """)
-        
-        columns = [column[0] for column in cursor.description]
-        software = [dict(zip(columns, row)) for row in cursor.fetchall()]
-
-        cursor.close()
-        conn.close()
-
-        return render_template('dt_planning.html', software=software)
-    except Exception as e:
-        flash(f"Error fetching planning data: {str(e)}", 'error')
-        return redirect(url_for('index'))
-    
-@app.route('/update_automation', methods=['POST'])
-def update_automation():
-    try:
         data = request.get_json()
+        
+        # Handle responsible as either array or string
+        responsible_raw = data.get('responsible')
+        if isinstance(responsible_raw, list):
+            responsible = ','.join([r for r in responsible_raw if r]) if responsible_raw else None
+        else:
+            responsible = responsible_raw
+
         conn = connect()
         cursor = conn.cursor()
         cursor.execute("""
-            UPDATE [DT_request].[dbo].[planning]
-            SET responsible = ?
-            WHERE id = ?
-        """, (data['responsible'], data['id']))
+            UPDATE tasks SET
+                week_number = COALESCE(?, week_number),
+                title = COALESCE(?, title),
+                description = COALESCE(?, description),
+                priority = COALESCE(?, priority),
+                responsible = COALESCE(?, responsible),
+                status = COALESCE(?, status),
+                start_date = COALESCE(?, start_date),
+                end_date = COALESCE(?, end_date),
+                planned_start_date = COALESCE(?, planned_start_date),
+                planned_end_date = COALESCE(?, planned_end_date),
+                estimated_hours = COALESCE(?, estimated_hours),
+                time_spent = COALESCE(?, time_spent),
+                updated_at = GETDATE()
+            WHERE id = ? AND project_id = ?
+        """, (
+            data.get('week_number'),
+            data.get('title'),
+            data.get('description'),
+            data.get('priority'),
+            responsible,
+            data.get('status'),
+            data.get('start_date') or None,
+            data.get('end_date') or None,
+            data.get('planned_start_date') or None,
+            data.get('planned_end_date') or None,
+            data.get('estimated_hours'),
+            data.get('time_spent'),
+            task_id,
+            project_id
+        ))
         conn.commit()
         cursor.close()
         conn.close()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/projects/<int:project_id>/tasks/delete/<int:task_id>', methods=['DELETE'])
+def delete_project_task(project_id, task_id):
+    try:
+        username = session.get('username')
+        if not username:
+            return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+
+        conn = connect()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE tasks SET is_deleted = 1 WHERE id = ? AND project_id = ?", (task_id, project_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
     
-@app.route('/get_automation_planning')
-def get_automation_planning():
-    month = int(request.args.get('month'))
-    year = int(request.args.get('year'))
-    conn = connect()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT id, week_number, year, responsible, notes
-        FROM [DT_request].[dbo].[planning]
-        WHERE category = 'automation' AND year = ?
-        ORDER BY week_number
-    """, (year,))
-    planning = []
-    for row in cursor.fetchall():
-        week_number = row[1]
-        # Calcula o primeiro e último dia da semana
-        jan1 = datetime(year, 1, 1)
-        start_of_week = jan1 + timedelta(days=(week_number - 1) * 7)
-        # Ajusta para segunda-feira
-        day_of_week = start_of_week.weekday()
-        start_of_week = start_of_week - timedelta(days=day_of_week)
-        end_of_week = start_of_week + timedelta(days=6)
-        # Se QUALQUER dia da semana cair no mês, inclui
-        if (start_of_week.month == month or end_of_week.month == month or
-            (start_of_week.month < month < end_of_week.month)):
-            planning.append({
-                'id': row[0],
-                'week_number': week_number,
-                'year': row[2],
-                'responsible': row[3],
-                'notes': row[4]
-            })
-    cursor.close()
-    conn.close()
-    return jsonify({'success': True, 'planning': planning})
-
+    
 @app.route('/get_software_users', methods=['GET'])
 def get_software_users():
     try:
@@ -5132,7 +4710,7 @@ def get_software_users():
         
         cursor.execute("""
             SELECT username, email
-            FROM [DT_request].[dbo].[users]
+            FROM users
             WHERE category = 'Software'
             ORDER BY username
         """)
@@ -5145,6 +4723,7 @@ def get_software_users():
         return jsonify({'success': True, 'users': users})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/get_automation_users', methods=['GET'])
 def get_automation_users():
     try:
@@ -5152,7 +4731,7 @@ def get_automation_users():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT username, email
-            FROM [DT_request].[dbo].[users]
+            FROM users
             WHERE category = 'Automation'
             ORDER BY username
         """)
@@ -5163,210 +4742,6 @@ def get_automation_users():
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
 
-@app.route('/add_software_application', methods=['POST'])
-def add_software_application():
-    try:
-        data = request.get_json()
-        application_name = data.get('application_name')
-        responsible = data.get('responsible')
-        notes = data.get('notes', '')
-        now = datetime.now()
-
-        if not application_name or not responsible:
-            return jsonify({'success': False, 'message': 'Nome da aplicação e responsável são obrigatórios'}), 400
-
-        conn = connect()
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            INSERT INTO [DT_request].[dbo].[planning] 
-                (category, application_name, responsible, notes, year, week_number, created_at, updated_at)
-            OUTPUT INSERTED.ID
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            'software',
-            application_name,
-            responsible,
-            notes,
-            now.year,
-            None,
-            now,
-            now
-        ))
-
-        new_id = cursor.fetchone()[0]
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        return jsonify({'success': True, 'id': new_id})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/remove_software_application/<int:app_id>', methods=['DELETE'])
-def remove_software_application(app_id):
-    try:
-        conn = connect()
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            DELETE FROM [DT_request].[dbo].[planning]
-            WHERE id = ? AND category = 'software'
-        """, (app_id,))
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/remove_automation_support/<int:support_id>', methods=['DELETE'])
-def remove_automation_support(support_id):
-    try:
-        conn = connect()
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            DELETE FROM [DT_request].[dbo].[planning]
-            WHERE id = ? AND category = 'automation'
-        """, ( support_id,))
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/draw_automation_support', methods=['POST'])
-def draw_automation_support():
-    try:
-        import random
-        import datetime
-
-        data = request.get_json()
-        month = int(data.get('month', datetime.datetime.now().month))
-        year = int(data.get('year', datetime.datetime.now().year))
-
-        today = datetime.datetime.now()
-        current_week = today.isocalendar()[1]
-
-        # Calcular todas as semanas do mês 
-        first_day = datetime.date(year, month, 1)
-        if month == 12:
-            last_day = datetime.date(year + 1, 1, 1) - datetime.timedelta(days=1)
-        else:
-            last_day = datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)
-
-        # Lista de semanas do mês (número da semana ISO)
-        weeks_in_month = []
-        d = first_day
-        while d <= last_day:
-            week_num = d.isocalendar()[1]
-            if week_num not in weeks_in_month:
-                weeks_in_month.append(week_num)
-            d += datetime.timedelta(days=1)
-
-        conn = connect()
-        cursor = conn.cursor()
-
-        # Verificar se já existem atribuições para TODAS as semanas do mês
-        cursor.execute("""
-            SELECT week_number, responsible
-            FROM [DT_request].[dbo].[planning]
-            WHERE category = 'automation' AND year = ?
-        """, (year,))
-        all_assignments = cursor.fetchall()
-
-        # Filtrar por mês
-        assigned_weeks = set()
-        for assignment in all_assignments:
-            week_num = assignment[0]
-            jan1 = datetime.date(year, 1, 1)
-            week_start = jan1 + timedelta(weeks=week_num-1)
-            if week_start.month == month:
-                assigned_weeks.add(week_num)
-
-        # Se todas as semanas do mês já tiverem atribuição, retorna erro
-        if all(week in assigned_weeks for week in weeks_in_month):
-            return jsonify({
-                'success': False, 
-                'message': 'Todas as semanas deste mês já possuem responsáveis designados.'
-            })
-
-        # Buscar todos os usuários da categoria 'Automation'
-        cursor.execute("""
-            SELECT username, email
-            FROM [DT_request].[dbo].[users]
-            WHERE category = 'Automation'
-        """)
-        all_users = [row[0] for row in cursor.fetchall()]
-
-        if not all_users:
-            return jsonify({
-                'success': False, 
-                'message': 'Nenhum usuário disponível para suporte à automação.'
-            })
-
-        sorteios = []
-        used_users = set(u[1] for u in all_assignments if u[0] in weeks_in_month)
-        available_users = [u for u in all_users if u not in used_users]
-        week_user_map = {}
-
-        # Para cada semana do mês, se não houver responsável, sorteia um diferente
-        for week_num in weeks_in_month:
-            if week_num in assigned_weeks:
-                continue
-
-            # Se todos já foram sorteados, reseta (mas nunca repete no mês)
-            if not available_users:
-                available_users = [u for u in all_users if u not in week_user_map.values()]
-
-            if not available_users:
-                available_users = all_users.copy()
-
-            selected_user = random.choice(available_users)
-            week_user_map[week_num] = selected_user
-            available_users.remove(selected_user)
-
-            # Adicionar ao banco
-            cursor.execute("""
-                INSERT INTO [DT_request].[dbo].[planning] 
-                (category, week_number, year, application_name, responsible, notes)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (
-                'automation',
-                week_num,
-                year,
-                None,
-                selected_user,
-                f"Responsável pelo suporte à automação da semana {week_num}/{year}"
-            ))
-            sorteios.append({'week_number': week_num, 'user': selected_user})
-
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        if sorteios:
-            msg = "Sorteio realizado para as semanas: " + ", ".join(
-                [f"{s['week_number']} ({s['user']})" for s in sorteios]
-            )
-        else:
-            msg = "Não há semanas disponíveis para sorteio neste mês."
-
-        return jsonify({
-            'success': True,
-            'message': msg,
-            'sorteios': sorteios
-        })
-
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-    
 @app.route('/team_building')
 def team_building():
     return render_template('team_building.html')
@@ -6500,96 +5875,62 @@ def get_analytics_data():
     try:
         logging.info("===== get_analytics_data START =====")
         
-        # Get filter parameters from query string
         start_date = request.args.get('start_date', '')
         end_date = request.args.get('end_date', '')
-        ticket_type = request.args.get('ticket_types', '')  # Single ticket type now
-        category = request.args.get('category', '')  # New category filter
-        prod_line = request.args.get('prod_line', '')  # New production line filter
-        responsible = request.args.get('responsible', '')  # Responsible filter
+        ticket_type = request.args.get('ticket_types', '')
+        prod_line = request.args.get('prod_line', '')
+        responsible = request.args.get('responsible', '')
         status_filter = request.args.get('status', '')
         
-        logging.info(f"Filters - Category: {category}, Type: {ticket_type}, Dates: {start_date} to {end_date}")
-        
-        # Determine which tables to query based on category or ticket_type
-        tables_to_query = []
-        
-        if ticket_type:
-            # If specific ticket type is selected
-            ticket_type_map = {
-                'DTAI': 'automation_improvement',
-                'DTAS': 'automation_support',
-                'DTNA': 'new_application',
-                'DTSI': 'software_issue'
-            }
-            if ticket_type in ticket_type_map:
-                tables_to_query = [ticket_type_map[ticket_type]]
-        elif category:
-            # If category is selected
-            if category == 'automation':
-                tables_to_query = ['automation_improvement', 'automation_support']
-            elif category == 'software':
-                tables_to_query = ['new_application', 'software_issue']
-        else:
-            # Default to all tables
-            tables_to_query = ['automation_improvement', 'automation_support', 'new_application', 'software_issue']
+        logging.info(f"Filters - Type: {ticket_type}, Dates: {start_date} to {end_date}")
         
         conn = connect()
         cursor = conn.cursor()
         
-        # Build base filter query
-        date_filter = ""
-        if start_date and end_date:
-            date_filter = f"WHERE created_at >= '{start_date}' AND created_at <= '{end_date}'"
-        elif start_date:
-            date_filter = f"WHERE created_at >= '{start_date}'"
-        elif end_date:
-            date_filter = f"WHERE created_at <= '{end_date}'"
+        # Build filter
+        where_clauses = ["is_deleted = 0"]
+        params = []
         
-        # 1. Distribution by Type (only for selected tables)
-        type_map = {
-            'automation_improvement': 'DTAI',
-            'automation_support': 'DTAS',
-            'new_application': 'DTNA',
-            'software_issue': 'DTSI'
-        }
+        if start_date:
+            where_clauses.append("created_at >= ?")
+            params.append(start_date)
+        if end_date:
+            where_clauses.append("created_at <= ?")
+            params.append(end_date)
+        if ticket_type:
+            where_clauses.append("type = ?")
+            params.append(ticket_type)
+        if prod_line:
+            where_clauses.append("line = ?")
+            params.append(prod_line)
+        if responsible:
+            where_clauses.append("responsible = ?")
+            params.append(responsible)
+        if status_filter:
+            where_clauses.append("status = ?")
+            params.append(int(status_filter))
         
-        # Build distribution query with proper date filtering
-        distribution_union_parts = []
-        for table in tables_to_query:
-            type_code = type_map[table]
-            if date_filter:
-                # Include created_at for filtering in subquery
-                query_part = f"SELECT '{type_code}' as type, COUNT(*) as count FROM {table} {date_filter}"
-            else:
-                query_part = f"SELECT '{type_code}' as type, COUNT(*) as count FROM {table}"
-            distribution_union_parts.append(query_part)
+        where_sql = " AND ".join(where_clauses)
         
-        distribution_query = " UNION ALL ".join(distribution_union_parts)
+        # 1. Distribution by Type
+        cursor.execute(f"""
+            SELECT type, COUNT(*) as count 
+            FROM maintenance_requests 
+            WHERE is_deleted = 0 
+            GROUP BY type
+        """)
+        distribution = [{'type': row[0], 'count': row[1]} for row in cursor.fetchall()]
         
-        try:
-            cursor.execute(distribution_query)
-            distribution = [{'type': row[0], 'count': row[1]} for row in cursor.fetchall()]
-        except Exception as e:
-            logging.error(f"Distribution query error: {str(e)}")
-            distribution = []
-        
-        # 2. KPIs - Total Tickets Created (Last 30 days) - based on selected tables
-        selected_tables_select = " UNION ALL ".join([f"SELECT status, created_at FROM {table}" for table in tables_to_query])
-        
-        kpi_query = f"""
-        SELECT 
-            COUNT(*) as total_created,
-            SUM(CASE WHEN status IN (2, -1) THEN 1 ELSE 0 END) as completed,
-            SUM(CASE WHEN status IN (0,1,3,4,5,6,7) THEN 1 ELSE 0 END) as pending,
-            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as in_progress
-        FROM (
-            {selected_tables_select}
-        ) AS all_tickets
-        WHERE created_at >= DATEADD(day, -30, CAST(GETDATE() AS DATE))
-        """
-        
-        cursor.execute(kpi_query)
+        # 2. KPIs - Last 30 days
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_created,
+                SUM(CASE WHEN status IN (2, -1) THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status IN (0,1,3,4,5,6,7) THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as in_progress
+            FROM maintenance_requests
+            WHERE is_deleted = 0 AND created_at >= DATEADD(day, -30, CAST(GETDATE() AS DATE))
+        """)
         kpi_row = cursor.fetchone()
         kpis = {
             'total_created': kpi_row[0] or 0,
@@ -6599,7 +5940,7 @@ def get_analytics_data():
             'completion_rate': round((kpi_row[1] / kpi_row[0] * 100) if kpi_row[0] > 0 else 0, 1)
         }
         
-        # 3. By Status - All time
+        # 3. By Status
         status_names = {
             -1: 'Rejected', 
             0: 'Waiting', 
@@ -6609,185 +5950,249 @@ def get_analytics_data():
             4: 'Waiting DT', 
             5: 'Waiting Requester', 
             6: 'Waiting Line', 
-            7: 'Waiting Maintenance',
-            None: 'Pending Approval'  # Newly created, not approved/rejected yet
+            7: 'Waiting Maintenance'
         }
         
-        selected_tables_select = " UNION ALL ".join([f"SELECT status FROM {table}" for table in tables_to_query])
-        
-        status_query = f"""
-        SELECT status, COUNT(*) as count
-        FROM (
-            {selected_tables_select}
-        ) AS all_tickets
-        GROUP BY status
-        ORDER BY status
-        """
-        
-        cursor.execute(status_query)
+        cursor.execute("""
+            SELECT status, COUNT(*) as count
+            FROM maintenance_requests
+            WHERE is_deleted = 0
+            GROUP BY status
+            ORDER BY status
+        """)
         by_status = []
         for row in cursor.fetchall():
             status_id = row[0]
             status_name = status_names.get(status_id, f'Status {status_id}')
             by_status.append({'status': status_id, 'status_name': status_name, 'count': row[1]})
         
-        # 4. Average completion time per type - only for selected tables
-        avg_time_parts = []
-        for table in tables_to_query:
-            type_code = type_map[table]
-            avg_time_parts.append(f"""SELECT '{type_code}' as type, AVG(DATEDIFF(day, created_at, updated_at)) as avg_days
-            FROM {table}
-            WHERE status = 2""")
-        
-        avg_time_query = " UNION ALL ".join(avg_time_parts)
-        
-        cursor.execute(avg_time_query)
+        # 4. Average completion time per type
+        cursor.execute("""
+            SELECT type, AVG(DATEDIFF(day, created_at, updated_at)) as avg_days
+            FROM maintenance_requests
+            WHERE status = 2 AND is_deleted = 0
+            GROUP BY type
+        """)
         avg_time = [{'type': row[0], 'avg_days': round(row[1], 1) if row[1] else 0} for row in cursor.fetchall()]
         
-        # 4.5 Tickets per Responsible (Total count)
-        try:
-            responsible_union_parts = []
-            for table in tables_to_query:
-                responsible_union_parts.append(f"SELECT responsible FROM {table} WHERE responsible IS NOT NULL AND responsible != ''")
-            
-            if responsible_union_parts:
-                responsible_select = " UNION ALL ".join(responsible_union_parts)
-                
-                tickets_per_responsible_query = f"""
-                SELECT responsible, COUNT(*) as ticket_count
-                FROM ({responsible_select}) AS all_responsible
-                GROUP BY responsible
-                ORDER BY ticket_count DESC
-                """
-                
-                cursor.execute(tickets_per_responsible_query)
-                tickets_per_responsible = [
-                    {'responsible': row[0] or 'Unknown', 'ticket_count': row[1] or 0}
-                    for row in cursor.fetchall()
-                ]
-            else:
-                tickets_per_responsible = []
-        except Exception as e:
-            logging.error(f"Tickets per responsible query error: {str(e)}")
-            tickets_per_responsible = []
+        # 5. Tickets per Responsible
+        cursor.execute("""
+            SELECT responsible, COUNT(*) as ticket_count
+            FROM maintenance_requests
+            WHERE is_deleted = 0 AND responsible IS NOT NULL AND responsible != ''
+            GROUP BY responsible
+            ORDER BY ticket_count DESC
+        """)
+        tickets_per_responsible = [
+            {'responsible': row[0] or 'Unknown', 'ticket_count': row[1] or 0}
+            for row in cursor.fetchall()
+        ]
         
-        # 5. Completed Tickets Analytics
-        # Total hours worked on completed tickets
-        try:
-            # For completed tickets, aggregate hours and responsible info
-            completed_union_parts = []
-            for table in tables_to_query:
-                # Use CAST to handle different data types, ISNULL for missing columns
-                completed_union_parts.append(f"""
-                SELECT 
-                    CAST(ISNULL(responsible, 'Unassigned') as VARCHAR(255)) as responsible,
-                    CAST(ISNULL([time], 0) as FLOAT) as hours
-                FROM {table} 
-                WHERE status = 2
-                """)
-            
-            completed_select = " UNION ALL ".join(completed_union_parts)
-            
-            # Total hours worked
-            total_hours_query = f"""
-            SELECT SUM(hours) as total_hours
-            FROM ({completed_select}) AS completed_data
-            """
-            
-            cursor.execute(total_hours_query)
-            hours_row = cursor.fetchone()
-            total_hours_worked = float(hours_row[0]) if hours_row[0] else 0
-            
-            # Hours per responsible (completed tickets only)
-            hours_per_responsible_query = f"""
-            SELECT responsible, SUM(hours) as total_hours, COUNT(*) as completed_count
-            FROM ({completed_select}) AS completed_data
-            WHERE responsible IS NOT NULL AND responsible != ''
+        # 6. Completed tickets - hours
+        cursor.execute("""
+            SELECT SUM(time_spent) as total_hours
+            FROM maintenance_requests
+            WHERE status = 2 AND is_deleted = 0
+        """)
+        hours_row = cursor.fetchone()
+        total_hours_worked = float(hours_row[0]) if hours_row[0] else 0
+        
+        # 7. Hours per responsible
+        cursor.execute("""
+            SELECT responsible, SUM(time_spent) as total_hours, COUNT(*) as completed_count
+            FROM maintenance_requests
+            WHERE status = 2 AND is_deleted = 0 AND responsible IS NOT NULL AND responsible != ''
             GROUP BY responsible
             ORDER BY total_hours DESC
-            """
-            
-            cursor.execute(hours_per_responsible_query)
-            hours_per_responsible = [
-                {'responsible': row[0] or 'Unknown', 'total_hours': float(row[1]) if row[1] else 0, 'completed_count': int(row[2]) if row[2] else 0}
-                for row in cursor.fetchall()
-            ]
-        except Exception as e:
-            logging.error(f"Completed tickets query error: {str(e)}")
-            total_hours_worked = 0
-            hours_per_responsible = []
+        """)
+        hours_per_responsible = [
+            {'responsible': row[0] or 'Unknown', 'total_hours': float(row[1]) if row[1] else 0, 'completed_count': int(row[2]) if row[2] else 0}
+            for row in cursor.fetchall()
+        ]
         
-        # 6. Projects: Time Spent per Project
-        time_per_project_query = f"""
-        SELECT p.id as project_id, p.name as project_name, SUM(ISNULL(t.time_spent, 0)) as total_hours
-        FROM [DT_request].[dbo].[projects] p
-        LEFT JOIN [DT_request].[dbo].[tasks] t ON p.id = t.project_id
-        {f"WHERE t.created_at >= '{start_date}' AND t.created_at <= '{end_date}'" if start_date and end_date else (f"WHERE t.created_at >= '{start_date}'" if start_date else (f"WHERE t.created_at <= '{end_date}'" if end_date else ""))}
-        GROUP BY p.id, p.name
-        ORDER BY total_hours DESC
-        """
-
-        cursor.execute(time_per_project_query)
+        # 8. Projects: Time Spent per Project
+        cursor.execute("""
+            SELECT p.id as project_id, p.name as project_name, SUM(ISNULL(t.time_spent, 0)) as total_hours
+            FROM projects p
+            LEFT JOIN tasks t ON p.id = t.project_id
+            WHERE p.is_deleted = 0
+            GROUP BY p.id, p.name
+            ORDER BY total_hours DESC
+        """)
         time_per_project = [
             {'project_id': row[0], 'project_name': row[1] or 'Unknown', 'total_hours': row[2] or 0}
             for row in cursor.fetchall()
         ]
         
-        # 7. Tasks per Project
-        tasks_per_project_query = f"""
-        SELECT p.name as project_name, COUNT(t.id) as task_count
-        FROM [DT_request].[dbo].[projects] p
-        LEFT JOIN [DT_request].[dbo].[tasks] t ON p.id = t.project_id
-        {f"WHERE t.created_at >= '{start_date}' AND t.created_at <= '{end_date}'" if start_date and end_date else (f"WHERE t.created_at >= '{start_date}'" if start_date else (f"WHERE t.created_at <= '{end_date}'" if end_date else ""))}
-        GROUP BY p.id, p.name
-        ORDER BY task_count DESC
-        """
-        
-        cursor.execute(tasks_per_project_query)
+        # 9. Tasks per Project
+        cursor.execute("""
+            SELECT p.name as project_name, COUNT(t.id) as task_count
+            FROM projects p
+            LEFT JOIN tasks t ON p.id = t.project_id
+            WHERE p.is_deleted = 0
+            GROUP BY p.id, p.name
+            ORDER BY task_count DESC
+        """)
         tasks_per_project = [
             {'project_name': row[0] or 'Unknown', 'task_count': row[1] or 0}
             for row in cursor.fetchall()
         ]
         
-        # 8. Average Time per Task by Project
-        avg_time_per_task_query = f"""
-        SELECT p.name as project_name, AVG(ISNULL(t.time_spent, 0)) as avg_hours
-        FROM [DT_request].[dbo].[projects] p
-        LEFT JOIN [DT_request].[dbo].[tasks] t ON p.id = t.project_id
-        {f"WHERE t.created_at >= '{start_date}' AND t.created_at <= '{end_date}'" if start_date and end_date else (f"WHERE t.created_at >= '{start_date}'" if start_date else (f"WHERE t.created_at <= '{end_date}'" if end_date else ""))}
-        GROUP BY p.id, p.name
-        ORDER BY avg_hours DESC
-        """
-        
-        cursor.execute(avg_time_per_task_query)
-        avg_time_per_task = [
-            {'project_name': row[0] or 'Unknown', 'avg_hours': row[1] or 0}
-            for row in cursor.fetchall()
-        ]
-        
-        # 9. Tasks by Status (all projects)
+        # 10. Tasks by Status
         task_status_names = {
-            0: 'Not Started', 
-            1: 'In Progress', 
-            2: 'Completed', 
-            3: 'On Hold', 
-            4: 'Cancelled'
+            'To Do': 'To Do', 
+            'In Progress': 'In Progress', 
+            'Standby': 'Standby', 
+            'Done': 'Done'
         }
         
-        tasks_status_query = f"""
-        SELECT ISNULL(status, 0) as status, COUNT(*) as count
-        FROM [DT_request].[dbo].[tasks]
-        {f"WHERE created_at >= '{start_date}' AND created_at <= '{end_date}'" if start_date and end_date else (f"WHERE created_at >= '{start_date}'" if start_date else (f"WHERE created_at <= '{end_date}'" if end_date else ""))}
-        GROUP BY status
-        ORDER BY status
-        """
-        
-        cursor.execute(tasks_status_query)
+        cursor.execute("""
+            SELECT status, COUNT(*) as count
+            FROM tasks
+            WHERE is_deleted = 0
+            GROUP BY status
+        """)
         tasks_status = []
         for row in cursor.fetchall():
-            status_id = row[0]
-            status_name = task_status_names.get(status_id, f'Status {status_id}')
-            tasks_status.append({'status': status_id, 'status_name': status_name, 'count': row[1]})
+            status_name = row[0] or 'To Do'
+            status_key = status_name
+        tasks_status.append({'status': status_key, 'status_name': status_name, 'count': row[1]})
+        
+        # Daily data from maintenance_requests
+        daily_savings = []
+        daily_tickets = []
+        daily_hours = []
+        tickets_by_line = []
+        time_by_line = []
+        savings_by_line = []
+        avg_savings_by_line = []
+        
+        # Build date filter for daily queries
+        date_filter_parts = []
+        if start_date:
+            date_filter_parts.append("created_at >= ?")
+        if end_date:
+            date_filter_parts.append("created_at <= ?")
+        
+        # Daily tickets query
+        try:
+            daily_query = "SELECT CAST(created_at AS DATE) as date, ISNULL(line, 'Unknown') as prod_line, COUNT(*) as ticket_count FROM maintenance_requests WHERE is_deleted = 0"
+            daily_params = []
+            if start_date:
+                daily_query += " AND created_at >= ?"
+                daily_params.append(start_date)
+            if end_date:
+                daily_query += " AND created_at <= ?"
+                daily_params.append(end_date)
+            if prod_line:
+                daily_query += " AND line = ?"
+                daily_params.append(prod_line)
+            daily_query += " GROUP BY CAST(created_at AS DATE), line ORDER BY date ASC"
+            
+            cursor.execute(daily_query, daily_params)
+            for row in cursor.fetchall():
+                daily_tickets.append({
+                    'date': str(row[0]),
+                    'prod_line': row[1],
+                    'ticket_count': row[2]
+                })
+        except Exception as e:
+            logging.error(f"Error in daily_tickets_query: {str(e)}")
+        
+        # Daily hours query
+        try:
+            daily_hours_query = "SELECT CAST(created_at AS DATE) as date, ISNULL(line, 'Unknown') as prod_line, SUM(ISNULL(time_spent, 0)) as total_hours FROM maintenance_requests WHERE is_deleted = 0"
+            daily_hours_params = []
+            if start_date:
+                daily_hours_query += " AND created_at >= ?"
+                daily_hours_params.append(start_date)
+            if end_date:
+                daily_hours_query += " AND created_at <= ?"
+                daily_hours_params.append(end_date)
+            if prod_line:
+                daily_hours_query += " AND line = ?"
+                daily_hours_params.append(prod_line)
+            daily_hours_query += " GROUP BY CAST(created_at AS DATE), line ORDER BY date ASC"
+            
+            cursor.execute(daily_hours_query, daily_hours_params)
+            for row in cursor.fetchall():
+                daily_hours.append({
+                    'date': str(row[0]),
+                    'prod_line': row[1],
+                    'total_hours': float(row[2]) if row[2] else 0
+                })
+        except Exception as e:
+            logging.error(f"Error in daily_hours_query: {str(e)}")
+        
+        # Tickets by production line
+        try:
+            line_query = "SELECT ISNULL(line, 'Unknown') as prod_line, COUNT(*) as ticket_count FROM maintenance_requests WHERE is_deleted = 0"
+            line_params = []
+            if start_date:
+                line_query += " AND created_at >= ?"
+                line_params.append(start_date)
+            if end_date:
+                line_query += " AND created_at <= ?"
+                line_params.append(end_date)
+            line_query += " GROUP BY line ORDER BY ticket_count DESC"
+            
+            cursor.execute(line_query, line_params)
+            tickets_by_line = [
+                {'prod_line': row[0], 'ticket_count': row[1]}
+                for row in cursor.fetchall()
+            ]
+        except Exception as e:
+            logging.error(f"Error in tickets_by_line: {str(e)}")
+        
+        # Time by production line
+        try:
+            time_line_query = "SELECT ISNULL(line, 'Unknown') as prod_line, SUM(ISNULL(time_spent, 0)) as total_hours FROM maintenance_requests WHERE is_deleted = 0"
+            time_line_params = []
+            if start_date:
+                time_line_query += " AND created_at >= ?"
+                time_line_params.append(start_date)
+            if end_date:
+                time_line_query += " AND created_at <= ?"
+                time_line_params.append(end_date)
+            time_line_query += " GROUP BY line ORDER BY total_hours DESC"
+            
+            cursor.execute(time_line_query, time_line_params)
+            time_by_line = [
+                {'prod_line': row[0], 'total_hours': row[1] or 0}
+                for row in cursor.fetchall()
+            ]
+        except Exception as e:
+            logging.error(f"Error in time_by_line: {str(e)}")
+        
+        # Savings by production line (8 hours = 150€)
+        try:
+            savings_query = "SELECT ISNULL(line, 'Unknown') as prod_line, SUM(ISNULL(time_spent, 0)) as total_hours, COUNT(*) as ticket_count FROM maintenance_requests WHERE status = 2 AND is_deleted = 0"
+            savings_params = []
+            if start_date:
+                savings_query += " AND created_at >= ?"
+                savings_params.append(start_date)
+            if end_date:
+                savings_query += " AND created_at <= ?"
+                savings_params.append(end_date)
+            savings_query += " GROUP BY line ORDER BY total_hours DESC"
+            
+            cursor.execute(savings_query, savings_params)
+            for row in cursor.fetchall():
+                total_hours = row[1] or 0
+                ticket_count = row[2] or 1
+                calculated_savings = (total_hours / 8) * 150
+                avg_savings = calculated_savings / ticket_count if ticket_count > 0 else 0
+                
+                savings_by_line.append({
+                    'prod_line': row[0],
+                    'total_savings': calculated_savings
+                })
+                avg_savings_by_line.append({
+                    'prod_line': row[0],
+                    'avg_savings': avg_savings
+                })
+        except Exception as e:
+            logging.error(f"Error in savings_by_line: {str(e)}")
         
         # 10. Tasks by Type
         task_type_names = {
@@ -6806,7 +6211,7 @@ def get_analytics_data():
                 ELSE 'planned'
             END as task_type,
             COUNT(*) as count
-        FROM [DT_request].[dbo].[tasks]
+        FROM tasks
         {f"WHERE created_at >= '{start_date}' AND created_at <= '{end_date}'" if start_date and end_date else (f"WHERE created_at >= '{start_date}'" if start_date else (f"WHERE created_at <= '{end_date}'" if end_date else ""))}
         GROUP BY 
             CASE 
@@ -7088,8 +6493,52 @@ def get_analytics_data():
         cursor.close()
         conn.close()
         
-        # Get status evolution data (for automation)
-        status_evolution = []
+        # Get status evolution data
+        try:
+            conn = connect()
+            cursor = conn.cursor()
+            
+            evolution_query = """
+                SELECT CAST(created_at AS DATE) as date, 
+                       CASE WHEN status = 2 THEN 'completed'
+                            WHEN status = 1 THEN 'in_progress'
+                            ELSE 'pending' 
+                       END as status,
+                       COUNT(*) as count
+                FROM maintenance_requests
+                WHERE is_deleted = 0
+            """
+            
+            filters = []
+            params = []
+            if responsible:
+                filters.append("responsible = ?")
+                params.append(responsible)
+            if start_date:
+                filters.append("created_at >= ?")
+                params.append(start_date)
+            if end_date:
+                filters.append("created_at <= ?")
+                params.append(end_date)
+            if filters:
+                evolution_query += " AND " + " AND ".join(filters)
+            
+            evolution_query += " GROUP BY CAST(created_at AS DATE), CASE WHEN status = 2 THEN 'completed' WHEN status = 1 THEN 'in_progress' ELSE 'pending' END"
+            evolution_query += " ORDER BY date ASC"
+            
+            cursor.execute(evolution_query, params)
+            for row in cursor.fetchall():
+                status_evolution.append({
+                    'date': str(row[0]),
+                    'status': row[1],
+                    'count': row[2]
+                })
+            
+            cursor.close()
+            conn.close()
+        except Exception as e:
+            logging.error(f"Error in status_evolution: {str(e)}")
+            status_evolution = []
         if category == 'automation' or not category:
             try:
                 conn = connect()

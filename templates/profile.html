@@ -26,12 +26,6 @@
                                 <input type="email" class="form-control" id="email" name="email" value="{{ email or '' }}" maxlength="150" placeholder="your.email@example.com">
                                 <small class="form-text text-muted">We'll never share your email</small>
                             </div>
-                            <div class="mb-4">
-                                <label for="github_username" class="form-label fw-bold">GitHub Username</label>
-                                <input type="text" class="form-control" id="github_username" name="github_username"
-                                       value="{{ github_username or '' }}" placeholder="your-github-username" maxlength="39">
-                                <small class="form-text text-muted">Optional - for portfolio linking</small>
-                            </div>
                             <button type="submit" class="btn btn-primary" id="saveProfileBtn" style="width: 100%;">
                                 <i class="fas fa-save me-2"></i><span id="profileBtnText">Save Changes</span>
                             </button>
@@ -181,7 +175,6 @@
         
         const name = document.getElementById('name').value.trim();
         const email = document.getElementById('email').value.trim();
-        const github_username = document.getElementById('github_username').value.trim() || null;
         
         // Validation
         if (name && name.length < 2) {
@@ -204,7 +197,7 @@
             const response = await fetch('/api/profile', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, github_username })
+                body: JSON.stringify({ name, email })
             });
             const result = await response.json();
             

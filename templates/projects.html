@@ -4,47 +4,29 @@
     <div class="top-controls d-flex justify-content-between align-items-center mb-3">
         <div class="d-flex align-items-center">
             <div class="me-2">
-                <label for="globalSearch" class="form-label mb-1">Global Search</label>
-                <input type="text" id="globalSearch" class="form-control" placeholder="Search projects..." style="max-width: 300px;">
+                <label for="globalSearch" class="form-label mb-1">Pesquisa</label>
+                <input type="text" id="globalSearch" class="form-control" placeholder="Pesquisar projetos..." style="max-width: 300px;">
             </div>
             <div class="me-2">
-                <label for="categoryFilter" class="form-label mb-1">Filter by Category</label>
-                <select id="categoryFilter" class="form-control" style="max-width: 200px;">
-                    <option value="">All Categories</option>
-                    <option value="Software">Software</option>
-                    <option value="Automation">Automation</option>
-                </select>
-            </div>
-            <div class="me-2">
-                <label for="statusFilter" class="form-label mb-1">Filter by Status</label>
-                <select id="statusFilter" class="form-control" style="max-width: 200px;">
-                    <option value="">All Status</option>
-                    <!-- Status options will be populated by JavaScript -->
-                </select>
-            </div>
-            <div class="me-2">
-                <label for="responsibleFilter" class="form-label mb-1">Filter by Responsible</label>
+                <label for="responsibleFilter" class="form-label mb-1">Filtrar por Responsável</label>
                 <select id="responsibleFilter" class="form-control" style="max-width: 200px;">
-                    <option value="">All Users</option>
-                    <!-- Responsible options will be populated by JavaScript -->
+                    <option value="">Todos os Utilizadores</option>
                 </select>
             </div>
         </div>
         <button class="new-ticket-btn btn btn-primary ms-3" id="globalAddProjectBtn" type="button">
-            <i class="fas fa-plus me-2"></i>Add Project
+            <i class="fas fa-plus me-2"></i>Adicionar Projeto
         </button>
     </div>
     <div class="list-section">
         <div class="d-flex justify-content-between align-items-center px-2 mb-2">
-            <span class="text-muted small" id="projectsCount">{{ projects|length }} projects</span>
+            <span class="text-muted small" id="projectsCount">{{ projects|length }} projetos</span>
         </div>
         <ul id="projectsList" class="list-group mt-1" style="margin-left: 14px; margin-right: 14px;">
             {% for project in projects %}
             <li class="list-group-item project-item"
-                data-category="{{ project.category }}"
                 data-name="{{ project.name|lower }}"
                 data-description="{{ project.description|lower }}"
-                data-status="{{ project.status|lower }}"
                 data-responsible="{% for resp in project.responsible_list %}{{ resp|lower }}{% if not loop.last %},{% endif %}{% endfor %}">
 
                 <!-- Top row: avatar + info + actions -->
@@ -56,24 +38,6 @@
                         <div class="flex-grow-1">
                             <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
                                 <strong>{{ project.name }}</strong>
-                                <span class="badge bg-secondary">{{ project.category }}</span>
-                                <span class="badge status-badge"
-                                      style="background-color: {% if project.status == 'Waiting' %}#6c757d{% elif project.status == 'Analyses' or project.status == 'Analyse' %}#17a2b8{% elif project.status == 'In Development' %}#007bff{% elif project.status == 'Pilot Phase' or project.status == 'Testing' %}#ffc107{% elif project.status == 'Implemented' %}#28a745{% elif project.status == 'Stand By' %}#dc3545{% else %}#6c757d{% endif %}">
-                                    {{ project.status }}
-                                </span>
-                                {% if project.github_repo %}
-                                <a href="https://github.com/{{ project.github_repo }}" target="_blank" class="badge bg-light text-dark">
-                                    <i class="fab fa-github me-1"></i>{{ project.github_repo }}
-                                </a>
-                                {% endif %}
-                                <!-- compact inline progress -->
-                                <div class="d-flex align-items-center gap-1" style="min-width:180px;">
-                                    <div style="flex:1;height:12px;border-radius:6px;background:#e9ecef;overflow:hidden;min-width:120px;">
-                                        <div style="height:100%;border-radius:6px;width:{{ project.progress_percentage }}%;
-                                                    background-color:{% if project.progress_percentage < 25 %}#dc3545{% elif project.progress_percentage < 50 %}#ffc107{% elif project.progress_percentage < 75 %}#007bff{% else %}#28a745{% endif %};"></div>
-                                    </div>
-                                    <span style="font-size:12px;color:#6c757d;white-space:nowrap;font-weight:600;">{{ project.progress_percentage }}%&nbsp;&nbsp;{{ "%.1f"|format(project.completed_hours) }}&nbsp;/&nbsp;{{ "%.1f"|format(project.total_estimated_hours) }}h</span>
-                                </div>
                             </div>
                             <div class="text-muted small mb-2">{{ project.description }}</div>
                             <div class="responsible-container">
@@ -82,29 +46,32 @@
                                     {{ resp[0].upper() if resp else 'U' }}
                                 </div>
                                 {% endfor %}
-                                <span class="responsible-text">{{ project.responsible_list|join(', ') if project.responsible_list else 'Unassigned' }}</span>
+                                <span class="responsible-text">{{ project.responsible_list|join(', ') if project.responsible_list else 'Sem responsável' }}</span>
                             </div>
                         </div>
                     </div>
                     <div class="d-flex align-items-center ms-2">
-                        <a href="{{ url_for('project_tasks', project_id=project.id) }}" class="action-btn view-btn me-2" title="View">
+                        <a href="{{ url_for('project_tasks', project_id=project.id) }}" class="action-btn view-btn me-2" title="Ver">
                             <i class="fas fa-eye"></i>
                         </a>
-                        <button class="action-btn edit-btn me-2" title="Edit" onclick='editProject({{ project.id }}, {{ project.name | tojson }}, {{ project.category | tojson }}, {{ project.description | tojson }}, {{ project.status | tojson }}, {{ project.responsible_list | tojson }}, {{ project.total_hours | tojson }}, {{ project.github_repo | tojson }})'>
+                        <button class="action-btn edit-btn me-2" title="Editar" data-id="{{ project.id }}" data-name="{{ project.name }}" data-desc="{{ project.description }}" data-resp='{{ project.responsible_list|tojson }}' onclick="openEditProject(this)">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="action-btn delete-btn" title="Delete" onclick="deleteProject('{{ project.id }}')">
+                        <button class="action-btn delete-btn" title="Eliminar" onclick="deleteProject('{{ project.id }}')">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- Date-based task timeline -->
-                <div class="task-timeline-wrap" id="tl-{{ project.id }}"><div class="tl-inner"></div></div>
-
             </li>
             {% endfor %}
         </ul>
+        {% if not projects %}
+        <div class="no-tickets" style="text-align: center; padding: 40px 20px;">
+            <i class="fas fa-folder-open" style="font-size: 48px; color: #adb5bd; margin-bottom: 15px;"></i>
+            <p style="color: #6c757d; font-size: 16px;">Ainda não existem projetos. Crie o seu primeiro projeto para começar.</p>
+        </div>
+        {% endif %}
     </div>
 
 <!-- Add Project Modal -->
@@ -112,56 +79,28 @@
     <div class="modal-dialog modal-dialog-end">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addProjectModalLabel"><i class="fas fa-plus-circle me-2"></i>Add Project</h5>
+                <h5 class="modal-title" id="addProjectModalLabel"><i class="fas fa-plus-circle me-2"></i>Adicionar Projeto</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="mb-2">
-                    <label for="projectName" class="form-label">Project Name</label>
-                    <input type="text" id="projectName" class="form-control" placeholder="Project Name">
+                    <label for="projectName" class="form-label">Nome do Projeto</label>
+                    <input type="text" id="projectName" class="form-control" placeholder="Nome do Projeto">
                 </div>
                 <div class="mb-2">
-                    <label for="projectCategory" class="form-label">Category</label>
-                    <select id="projectCategory" class="form-control" onchange="updateStatusOptions()">
-                        <option value="">Select category</option>
-                        <option value="Software">Software</option>
-                        <option value="Automation">Automation</option>
-                    </select>
-                </div>
-                <div class="mb-2">
-                    <label for="projectStatus" class="form-label">Status</label>
-                    <select id="projectStatus" class="form-control">
-                        <option value="Waiting">Waiting</option>
-                    </select>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Responsible</label>
+                    <label class="form-label">Responsável(eis)</label>
                     <div id="projectResponsibleList" class="checkbox-user-list border rounded p-2" style="max-height:140px;overflow-y:auto;">
-                        <span class="text-muted small">Loading users...</span>
+                        <span class="text-muted small">A carregar utilizadores...</span>
                     </div>
                 </div>
                 <div class="mb-2">
-                    <label for="projectTotalHours" class="form-label">Total Hours</label>
-                    <input type="number" id="projectTotalHours" class="form-control" placeholder="0.0" step="0.5" min="0">
-                </div>
-                <div class="mb-2">
-                    <label for="projectDescription" class="form-label">Description</label>
-                    <textarea id="projectDescription" class="form-control" placeholder="Description"></textarea>
-                </div>
-                <div class="mb-2">
-                    <label for="projectGithubRepo" class="form-label">GitHub Repository (optional)</label>
-                    <select id="projectGithubRepo" class="form-select">
-                        <option value="">-- Select a repository --</option>
-                    </select>
-                    <button class="btn btn-outline-secondary btn-sm ms-2" type="button" onclick="loadGithubRepos('projectGithubRepo')" title="Load repositories">
-                        <i class="fas fa-sync-alt"></i> Load
-                    </button>
-                    <div class="form-text">Load your repositories from GitHub</div>
+                    <label for="projectDescription" class="form-label">Descrição</label>
+                    <textarea id="projectDescription" class="form-control" placeholder="Descrição"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="confirmProject()"><i class="fas fa-check me-2"></i>Add</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmProject()"><i class="fas fa-check me-2"></i>Adicionar</button>
             </div>
         </div>
     </div>
@@ -172,53 +111,29 @@
     <div class="modal-dialog modal-dialog-end">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="editProjectModalLabel"><i class="fas fa-edit me-2"></i>Edit Project</h5>
+                <h5 class="modal-title" id="editProjectModalLabel"><i class="fas fa-edit me-2"></i>Editar Projeto</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="editProjectId">
                 <div class="mb-2">
-                    <label for="editProjectName" class="form-label">Project Name</label>
-                    <input type="text" id="editProjectName" class="form-control" placeholder="Project Name">
+                    <label for="editProjectName" class="form-label">Nome do Projeto</label>
+                    <input type="text" id="editProjectName" class="form-control" placeholder="Nome do Projeto">
                 </div>
                 <div class="mb-2">
-                    <label for="editProjectCategory" class="form-label">Category</label>
-                    <select id="editProjectCategory" class="form-control" onchange="updateEditStatusOptions()">
-                        <option value="">Select category</option>
-                        <option value="Software">Software</option>
-                        <option value="Automation">Automation</option>
-                    </select>
-                </div>
-                <div class="mb-2">
-                    <label for="editProjectStatus" class="form-label">Status</label>
-                    <select id="editProjectStatus" class="form-control">
-                        <option value="Waiting">Waiting</option>
-                    </select>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Responsible</label>
+                    <label class="form-label">Responsável(eis)</label>
                     <div id="editProjectResponsibleList" class="checkbox-user-list border rounded p-2" style="max-height:140px;overflow-y:auto;">
-                        <span class="text-muted small">Loading users...</span>
+                        <span class="text-muted small">A carregar utilizadores...</span>
                     </div>
                 </div>
                 <div class="mb-2">
-                    <label for="editProjectDescription" class="form-label">Description</label>
-                    <textarea id="editProjectDescription" class="form-control" placeholder="Description"></textarea>
-                </div>
-                <div class="mb-2">
-                    <label for="editProjectGithubRepo" class="form-label">GitHub Repository (optional)</label>
-                    <select id="editProjectGithubRepo" class="form-select">
-                        <option value="">-- Select a repository --</option>
-                    </select>
-                    <button class="btn btn-outline-secondary btn-sm ms-2" type="button" onclick="loadGithubRepos('editProjectGithubRepo')" title="Load repositories">
-                        <i class="fas fa-sync-alt"></i> Load
-                    </button>
-                    <div class="form-text">Load your repositories from GitHub</div>
+                    <label for="editProjectDescription" class="form-label">Descrição</label>
+                    <textarea id="editProjectDescription" class="form-control" placeholder="Descrição"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="confirmEditProject()"><i class="fas fa-check me-2"></i>Save</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmEditProject()"><i class="fas fa-check me-2"></i>Guardar</button>
             </div>
         </div>
     </div>
@@ -574,9 +489,11 @@
 <script>
 // Timeline data injected server-side — no HTML attribute encoding issues
 window.PROJECT_TIMELINES = {
+    {% if projects %}
     {% for project in projects %}
     {{ project.id }}: {{ project.task_timeline | tojson | safe }},
     {% endfor %}
+    {% endif %}
 };
 </script>
 <script>
@@ -614,21 +531,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function setupFilterListeners() {
     const searchInput = document.getElementById('globalSearch');
-    const categoryFilter = document.getElementById('categoryFilter');
-    const statusFilter = document.getElementById('statusFilter');
     const responsibleFilter = document.getElementById('responsibleFilter');
     
     if (searchInput) {
         searchInput.addEventListener('input', debounce(filterProjectsList, 200));
         searchInput.addEventListener('keyup', debounce(filterProjectsList, 200));
-    }
-    
-    if (categoryFilter) {
-        categoryFilter.addEventListener('change', filterProjectsList);
-    }
-    
-    if (statusFilter) {
-        statusFilter.addEventListener('change', filterProjectsList);
     }
     
     if (responsibleFilter) {
@@ -795,14 +702,10 @@ function populateResponsibleDropdown(dropdownId, callback) {
 
 function confirmProject() {
     const name = document.getElementById('projectName').value;
-    const category = document.getElementById('projectCategory').value;
-    const status = document.getElementById('projectStatus').value;
-    const totalHours = document.getElementById('projectTotalHours').value;
     const description = document.getElementById('projectDescription').value;
-    const githubRepo = document.getElementById('projectGithubRepo').value.trim();
 
-    if (!name || !category) {
-        notify('warning', 'Please fill in all required fields.');
+    if (!name) {
+        notify('warning', 'Por favor preencha o nome do projeto.');
         return;
     }
 
@@ -813,45 +716,51 @@ function confirmProject() {
         type: 'POST',
         contentType: 'application/json',
         data: JSON.stringify({
-            name, category, status, responsible,
-            total_hours: parseFloat(totalHours) || 0,
-            description, github_repo: githubRepo || null
+            name,
+            responsible,
+            description
         }),
         success: function(res) {
             if (res.success) location.reload();
             else notify('error', res.message);
         },
-        error: function() { notify('error', 'Error adding project.'); }
+        error: function() { notify('error', 'Erro ao adicionar projeto.'); }
     });
 
     bootstrap.Modal.getInstance(document.getElementById('addProjectModal')).hide();
 }
 
-function editProject(projectId, name, category, description, status, responsible_list, total_hours, github_repo) {
+function editProject(projectId, name, description, responsible_list) {
     const modal = new bootstrap.Modal(document.getElementById('editProjectModal'));
 
     document.getElementById('editProjectId').value          = projectId;
     document.getElementById('editProjectName').value        = name || '';
-    document.getElementById('editProjectCategory').value   = category || '';
     document.getElementById('editProjectDescription').value = description || '';
-    document.getElementById('editProjectGithubRepo').value = github_repo || '';
-
-    updateEditStatusOptions();
-    document.getElementById('editProjectStatus').value = status || 'Waiting';
 
     populateResponsibleCheckboxes('editProjectResponsibleList', responsible_list, () => modal.show());
+}
+
+function openEditProject(btn) {
+    const id = btn.getAttribute('data-id');
+    const name = btn.getAttribute('data-name') || '';
+    const description = btn.getAttribute('data-desc') || '';
+    const respJson = btn.getAttribute('data-resp') || '[]';
+    let responsible_list = [];
+    try {
+        responsible_list = JSON.parse(respJson);
+    } catch (e) {
+        responsible_list = [];
+    }
+    editProject(id, name, description, responsible_list);
 }
 
 function confirmEditProject() {
     const projectId  = document.getElementById('editProjectId').value;
     const name       = document.getElementById('editProjectName').value;
-    const category   = document.getElementById('editProjectCategory').value;
-    const status     = document.getElementById('editProjectStatus').value;
     const description= document.getElementById('editProjectDescription').value;
-    const githubRepo = document.getElementById('editProjectGithubRepo').value.trim();
 
-    if (!name || !category) {
-        notify('warning', 'Please fill in all required fields.');
+    if (!name) {
+        notify('warning', 'Por favor preencha o nome do projeto.');
         return;
     }
 
@@ -862,8 +771,8 @@ function confirmEditProject() {
         type: 'PUT',
         contentType: 'application/json',
         data: JSON.stringify({
-            name, category, status, responsible,
-            description, github_repo: githubRepo || null
+            name, responsible,
+            description
         }),
         success: function(res) {
             if (res.success) location.reload();
@@ -908,40 +817,6 @@ function deleteProject(projectId) {
     });
 }
 
-// Load GitHub repos into a select dropdown
-async function loadGithubRepos(selectId) {
-    try {
-        const response = await fetch('/api/github/repos');
-        const data = await response.json();
-        if (data.success) {
-            const select = document.getElementById(selectId);
-            if (!select) return;
-            // Clear existing options except first
-            while (select.options.length > 1) {
-                select.remove(1);
-            }
-            // Add repos
-            data.repos.forEach(repo => {
-                const option = document.createElement('option');
-                option.value = repo.full_name;
-                option.textContent = `${repo.full_name}${repo.private ? ' 🔒' : ''}`;
-                option.title = repo.private ? 'Private repository' : '';
-                select.appendChild(option);
-            });
-        }
-    } catch (e) {
-        console.error('Error loading GitHub repos:', e);
-    }
-}
-
-// Auto-load repos when modals open
-document.getElementById('addProjectModal').addEventListener('shown.bs.modal', function () {
-    loadGithubRepos('projectGithubRepo');
-});
-document.getElementById('editProjectModal').addEventListener('shown.bs.modal', function () {
-    loadGithubRepos('editProjectGithubRepo');
-});
-
 function normalizeText(str) {
     if (!str) return '';
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -949,18 +824,14 @@ function normalizeText(str) {
 
 function filterProjectsList() {
     const searchInput = document.getElementById('globalSearch');
-    const categoryFilter = document.getElementById('categoryFilter');
-    const statusFilter = document.getElementById('statusFilter');
     const responsibleFilter = document.getElementById('responsibleFilter');
     const projectsCount = document.getElementById('projectsCount');
     const noResults = document.getElementById('noResults');
     const projectsList = document.getElementById('projectsList');
 
-    if (!searchInput || !categoryFilter || !projectsList) return;
+    if (!searchInput || !projectsList) return;
 
     const searchText = normalizeText(searchInput.value);
-    const categoryFilter_value = categoryFilter.value;
-    const statusFilter_value = statusFilter ? statusFilter.value : '';
     const responsibleFilter_value = responsibleFilter ? responsibleFilter.value : '';
 
     let visibleCount = 0;
@@ -968,25 +839,21 @@ function filterProjectsList() {
 
     projectItems.forEach(item => {
         const itemName = normalizeText(item.dataset.name || '');
-        const itemCategory = item.dataset.category || '';
         const itemDescription = normalizeText(item.dataset.description || '');
         const itemResponsible = normalizeText(item.dataset.responsible || '');
-        const itemStatus = item.dataset.status || '';
 
         const searchableText = `${itemName} ${itemDescription} ${itemResponsible}`;
         const matchesSearch = !searchText || searchableText.includes(searchText);
-        const matchesCategory = !categoryFilter_value || itemCategory === categoryFilter_value;
-        const matchesStatus = !statusFilter_value || normalizeText(itemStatus) === normalizeText(statusFilter_value);
         const matchesResponsible = !responsibleFilter_value || itemResponsible.includes(normalizeText(responsibleFilter_value));
 
-        const visible = matchesSearch && matchesCategory && matchesStatus && matchesResponsible;
+        const visible = matchesSearch && matchesResponsible;
         item.style.display = visible ? '' : 'none';
         if (visible) visibleCount++;
     });
 
     // Update projects count
     if (projectsCount) {
-        projectsCount.textContent = `${visibleCount} project${visibleCount !== 1 ? 's' : ''}`;
+        projectsCount.textContent = `${visibleCount} projeto${visibleCount !== 1 ? 's' : ''}`;
     }
 
     // Show/hide no results message
@@ -1000,28 +867,7 @@ function filterProjectsList() {
 }
 
 function populateFilterOptions() {
-    const statusFilter = document.getElementById('statusFilter');
     const responsibleFilter = document.getElementById('responsibleFilter');
-    
-    if (statusFilter) {
-        // Get all unique statuses from project items
-        const statuses = new Set();
-        document.querySelectorAll('.project-item').forEach(item => {
-            const status = item.dataset.status;
-            if (status) statuses.add(status);
-        });
-        
-        // Clear existing options except "All Status"
-        statusFilter.innerHTML = '<option value="">All Status</option>';
-        
-        // Add status options
-        Array.from(statuses).sort().forEach(status => {
-            const option = document.createElement('option');
-            option.value = status;
-            option.textContent = status.replace(/\b\w/g, c => c.toUpperCase());
-            statusFilter.appendChild(option);
-        });
-    }
     
     if (responsibleFilter) {
         // Get all unique responsible users from project items
@@ -1034,7 +880,7 @@ function populateFilterOptions() {
         });
         
         // Clear existing options except "All Users"
-        responsibleFilter.innerHTML = '<option value="">All Users</option>';
+        responsibleFilter.innerHTML = '<option value="">Todos os Utilizadores</option>';
         
         // Add responsible options
         Array.from(responsibles).sort().forEach(resp => {
@@ -1044,50 +890,6 @@ function populateFilterOptions() {
             responsibleFilter.appendChild(option);
         });
     }
-}
-
-function updateStatusOptions() {
-    const category = document.getElementById('projectCategory').value;
-    const statusSelect = document.getElementById('projectStatus');
-    
-    if (!statusSelect) return;
-    
-    statusSelect.innerHTML = '';
-    
-    const softwareStatuses = ['Waiting', 'Analyses', 'In Development', 'Pilot Phase', 'Implemented', 'Stand By'];
-    const automationStatuses = ['Waiting', 'Analyse', 'Implemented', 'Stand By', 'In Development', 'Testing'];
-    
-    const statuses = category === 'Software' ? softwareStatuses : automationStatuses;
-    
-    statuses.forEach(status => {
-        const option = document.createElement('option');
-        option.value = status;
-        option.textContent = status;
-        statusSelect.appendChild(option);
-    });
-}
-
-function updateEditStatusOptions() {
-    const category = document.getElementById('editProjectCategory').value;
-    const statusSelect = document.getElementById('editProjectStatus');
-    
-    if (!statusSelect) return;
-    
-    const currentStatus = statusSelect.value;
-    statusSelect.innerHTML = '';
-    
-    const softwareStatuses = ['Waiting', 'Analyses', 'In Development', 'Pilot Phase', 'Implemented', 'Stand By'];
-    const automationStatuses = ['Waiting', 'Analyse', 'Implemented', 'Stand By', 'In Development', 'Testing'];
-    
-    const statuses = category === 'Software' ? softwareStatuses : automationStatuses;
-    
-    statuses.forEach(status => {
-        const option = document.createElement('option');
-        option.value = status;
-        option.textContent = status;
-        if (status === currentStatus) option.selected = true;
-        statusSelect.appendChild(option);
-    });
 }
 
 function initializeProjectsTimeline() { /* timelines are rendered per-card on load */ }
@@ -1292,41 +1094,6 @@ function renderProjectTimelines() {
         });
     });
 }
-
-// Load GitHub repos into a select dropdown
-async function loadGithubRepos(selectId) {
-    try {
-        const response = await fetch('/api/github/repos');
-        const data = await response.json();
-        if (data.success) {
-            const select = document.getElementById(selectId);
-            if (!select) return;
-            // Clear existing options except first
-            while (select.options.length > 1) {
-                select.remove(1);
-            }
-            // Add repos
-            data.repos.forEach(repo => {
-                const option = document.createElement('option');
-                option.value = repo.full_name;
-                option.textContent = `${repo.full_name}${repo.private ? ' 🔒' : ''}`;
-                option.title = repo.private ? 'Private repository' : '';
-                select.appendChild(option);
-            });
-        }
-    } catch (e) {
-        console.error('Error loading GitHub repos:', e);
-    }
-}
-
-// Auto-load repos when modals open
-document.getElementById('addProjectModal').addEventListener('shown.bs.modal', function () {
-    loadGithubRepos('projectGithubRepo');
-});
-document.getElementById('editProjectModal').addEventListener('shown.bs.modal', function () {
-    loadGithubRepos('editProjectGithubRepo');
-});
-
 
 
 </script>

@@ -1,58 +1,55 @@
 {% extends 'home.html' %}
 {% block content %}
-
-<body>
     <div class="main-container">
         <!-- Top Controls Section -->
         <div class="top-controls">
             <div class="filter-section">
-                <div>
-                    <label class="form-label">Filter by Category</label>
-                    <select id="categoryFilter" name="category_filter" class="form-select">
-                        <option value="">All Categories</option>
-                        <option value="DTAI">🤖 Automation Improvement</option>
-                        <option value="DTAS">🦾 Automation Support</option>
-                        <option value="DTNA">🧑🏻‍💻 New Platform Software Development/Idea</option>
-                        <option value="DTSI">🐛 Platform Software Improvement/Bug/Issue</option>
-                        {% if user_category == 'software' or user_category == 'admin' %}<option value="DTIR">🔐 Software Internal Reports</option>{% endif %}
-                    </select>
-                </div>
+            <div>
+                <label class="form-label">Filtrar por Categoria</label>
+                <select id="categoryFilter" name="category_filter" class="form-select">
+                    <option value="">Todas as Categorias</option>
+                    <option value="MTSE">🛡️ Segurança</option>
+                    <option value="MTQA">🎯 Qualidade</option>
+                    <option value="MTEX">⚙️ Excelência Operacional</option>
+                    <option value="MTREP">⚡ Reparações Eletrónicas</option>
+                </select>
+            </div>
             </div>
             <button type="button" class="new-ticket-btn" data-bs-toggle="modal" data-bs-target="#newTicketModal">
-                <i class="fas fa-plus me-2"></i>New Ticket
+                <i class="fas fa-plus me-2"></i>Novo Pedido
             </button>
         </div>
 
         <!-- Table Sections -->
         {% for cat, tickets, table_id, col3, col3_label in [
-            ('DTAI', dtai_tickets, 'dtaiTable', 'prod_line', 'Line'),
-            ('DTAS', dtas_tickets, 'dtasTable', 'prod_line', 'Line'),
-            ('DTNA', dtna_tickets, 'dtnaTable', 'department', 'Department'),
-            ('DTSI', dtsi_tickets, 'dtsiTable', 'app_name', 'Application')
+            ('MTSE', mtse_tickets, 'mtseTable', 'prod_line', 'Line'),
+            ('MTQA', mtqa_tickets, 'mtqaTable', 'prod_line', 'Line'),
+            ('MTEX', mtex_tickets, 'mtexTable', 'prod_line', 'Line'),
+            ('MTREP', mtrep_tickets, 'mtrepTable', 'prod_line', 'Line')
         ] %}
         {% if tickets %}
         <div class="table-section">
             <h2>
-                {{ cat == 'DTAI' and 'Automation Improvement (DTAI)' or
-                   cat == 'DTAS' and 'Automation Support (DTAS)' or
-                   cat == 'DTNA' and 'New Platform Software Development/Idea (DTNA)' or
-                   cat == 'DTSI' and 'Platform Software Improvement/Bug/Issue (DTSI)' }}
-                <span class="table-info">{{ tickets|length }} tickets</span>
+                {{ cat == 'MTSE' and 'Segurança (MTSE)' or
+                   cat == 'MTQA' and 'Qualidade (MTQA)' or
+                   cat == 'MTEX' and 'Excelência Operacional (MTEX)' or
+                   cat == 'MTREP' and 'Reparações Eletrónicas (MTREP)' }}
+                <span class="table-info">{{ tickets|length }} pedidos</span>
             </h2>
             <div class="data-table">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0" id="{{ table_id }}">
                         <thead>
                             <tr>
-                                <th>Code</th>
-                                <th>Title</th>
-                                <th>Expected Date</th>
-                                <th>Responsible</th>
-                                <th>Status</th>
-                                <th>Created At</th>
-                                <th>Updated At</th>
-                                <th>Details</th>
-                                <th>Delete</th>
+                                <th>Código</th>
+                                <th>Título</th>
+                                <th>Data Prevista</th>
+                                <th>Responsável</th>
+                                <th>Estado</th>
+                                <th>Criado Em</th>
+                                <th>Atualizado Em</th>
+                                <th>Detalhes</th>
+                                <th>Eliminar</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -61,15 +58,15 @@
                                 <td><span class="badge-code">{{ row.internal_code or '' }}</span></td>
                                 <td>{{ row.title or '' }}</td>
                                 <td>
-                                    {% if row.expected_date is none or row.expected_date == 'Being analyzed' %}
-                                        <span class="status-badge status-being-analyzed">Being analyzed</span>
+                                    {% if row.expected_date is none or row.expected_date == 'Em análise' %}
+                                        <span class="status-badge status-being-analyzed">Em análise</span>
                                     {% else %}
                                         {{ row.expected_date }}
                                     {% endif %}
                                 </td>
                                 <td>
                                     {% if not row.responsible_name %}
-                                        <span class="status-badge status-being-determined">To be determined</span>
+                                        <span class="status-badge status-being-determined">Por definir</span>
                                     {% else %}
                                         {{ row.responsible_name }}
                                     {% endif %}
@@ -79,36 +76,22 @@
                                         <span class="status-badge status-done">Done</span>
                                     {% elif row.status == 1 %}
                                         <span class="status-badge status-approved">In Progress</span>
-                                    {% elif row.status == 0 %}
-                                        <span class="status-badge status-waiting">Waiting</span>
-                                    {% elif row.status == 3 %}
-                                        <span class="status-badge status-under-analysis">Under Analysis</span>
-                                    {% elif row.status == 4 %}
-                                        <span class="status-badge" style="background-color: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 4px;">Waiting from DT</span>
-                                    {% elif row.status == 5 %}
-                                        <span class="status-badge" style="background-color: #fff3e0; color: #f57c00; padding: 4px 8px; border-radius: 4px;">Waiting from Requester</span>
-                                    {% elif row.status == 6 %}
-                                        <span class="status-badge" style="background-color: #e0f2f1; color: #00897b; padding: 4px 8px; border-radius: 4px;">Waiting for Line</span>
-                                    {% elif row.status == 7 %}
-                                        <span class="status-badge" style="background-color: #f3e5f5; color: #7b1fa2; padding: 4px 8px; border-radius: 4px;">Waiting Maintenance</span>
-                                    {% elif row.status == -1 %}
-                                        <span class="status-badge status-rejected">Rejected</span>
                                     {% else %}
-                                        <span class="status-badge status-being-analyzed">Being analyzed</span>
+                                        <span class="status-badge status-waiting">To Do</span>
                                     {% endif %}
                                 </td>
                                 <td>
                                     {% if row.created_at %}
-                                        {{ row.created_at.strftime('%d-%m-%Y %H:%M') }}
+                                        {{ row.created_at[:16] if row.created_at else 'N/D' }}
                                     {% else %}
-                                        <span class="text-muted">N/A</span>
+                                        <span class="text-muted">N/D</span>
                                     {% endif %}
                                 </td>
                                 <td>
                                     {% if row.updated_at %}
-                                        {{ row.updated_at.strftime('%d-%m-%Y %H:%M') }}
+                                        {{ row.updated_at[:16] if row.updated_at else 'N/D' }}
                                     {% else %}
-                                        <span class="text-muted">N/A</span>
+                                        <span class="text-muted">N/D</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -120,11 +103,11 @@
                                 <td>
                                     <div class="action-buttons">
                                         {% if row.status == 5 and session.name == row.requester %}
-                                        <button class="action-btn edit-btn" data-code="{{ row.internal_code }}" data-bs-toggle="modal" data-bs-target="#editTicketModal" title="Add Additional Information (Required)" onclick='loadTicketForEdit("{{ row.internal_code }}")' style="background-color: #f97316; border-color: #f97316;">
+                                        <button class="action-btn edit-btn" data-code="{{ row.internal_code }}" data-bs-toggle="modal" data-bs-target="#editTicketModal" title="Adicionar Informação Adicional (Obrigatório)" onclick='loadTicketForEdit("{{ row.internal_code }}")' style="background-color: #f97316; border-color: #f97316;">
                                             <i class="fas fa-reply"></i>
                                         </button>
                                         {% endif %}
-                                        <button class="action-btn delete-btn" data-code="{{ row.internal_code }}" title="Delete Ticket">
+                                        <button class="action-btn delete-btn" data-code="{{ row.internal_code }}" title="Eliminar Pedido">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
@@ -139,237 +122,78 @@
         {% endif %}
         {% endfor %}
 
-        <!-- Software Internal Reports Section (DTIR) - Only visible to Software/Admin -->
-        {% if (user_category == 'software' or user_category == 'admin') and dtir_tickets %}
-        <div class="table-section" data-category="DTIR">
-            <h2>
-                Software Internal Reports (DTIR)
-                <span class="table-info">{{ dtir_tickets|length }} reports</span>
-            </h2>
-            <div class="data-table">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0" id="dtirTable">
-                        <thead>
-                            <tr>
-                                <th>Code</th>
-                                <th>Title</th>
-                                <th>Requested By</th>
-                                <th>Status</th>
-                                <th>Created At</th>
-                                <th>Updated At</th>
-                                <th>Details</th>
-                                <th>Delete</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in dtir_tickets %}
-                            <tr>
-                                <td><span class="badge-code">{{ row.internal_code or '' }}</span></td>
-                                <td>{{ row.title or '' }}</td>
-                                <td>{{ row.reporter_name or row.reporter or '' }}</td>
-                                <td>
-                                    {% if row.status == 2 %}
-                                        <span class="status-badge status-done">Done</span>
-                                    {% elif row.status == 1 %}
-                                        <span class="status-badge status-approved">In Progress</span>
-                                    {% elif row.status == 0 %}
-                                        <span class="status-badge status-waiting">Waiting</span>
-                                    {% elif row.status == 3 %}
-                                        <span class="status-badge status-under-analysis">Under Analysis</span>
-                                    {% elif row.status == 4 %}
-                                        <span class="status-badge" style="background-color: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 4px;">Waiting from DT</span>
-                                    {% elif row.status == 5 %}
-                                        <span class="status-badge" style="background-color: #fff3e0; color: #f57c00; padding: 4px 8px; border-radius: 4px;">Waiting from Requester</span>
-                                    {% elif row.status == 6 %}
-                                        <span class="status-badge" style="background-color: #e0f2f1; color: #00897b; padding: 4px 8px; border-radius: 4px;">Waiting for Line</span>
-                                    {% elif row.status == 7 %}
-                                        <span class="status-badge" style="background-color: #f3e5f5; color: #7b1fa2; padding: 4px 8px; border-radius: 4px;">Waiting Maintenance</span>
-                                    {% elif row.status == -1 %}
-                                        <span class="status-badge status-rejected">Rejected</span>
-                                    {% else %}
-                                        <span class="status-badge status-being-analyzed">Being analyzed</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if row.created_at %}
-                                        {{ row.created_at.strftime('%d-%m-%Y %H:%M') }}
-                                    {% else %}
-                                        <span class="text-muted">N/A</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if row.updated_at %}
-                                        {{ row.updated_at.strftime('%d-%m-%Y %H:%M') }}
-                                    {% else %}
-                                        <span class="text-muted">N/A</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <i class="fas fa-eye detail-icon"
-                                       data-bs-toggle="modal"
-                                       data-bs-target="#ticketDetailModal"
-                                       onclick='showTicketDetails("DTIR", {{ row|tojson|safe }})'></i>
-                                </td>
-                                <td>
-                                    <div class="action-buttons">
-                                        {% if row.status == 5 and session.name == row.requester %}
-                                        <button class="action-btn edit-btn" data-code="{{ row.internal_code }}" data-bs-toggle="modal" data-bs-target="#editTicketModal" title="Add Additional Information (Required)" onclick='loadTicketForEdit("{{ row.internal_code }}")' style="background-color: #f97316; border-color: #f97316;">
-                                            <i class="fas fa-reply"></i>
-                                        </button>
-                                        {% endif %}
-                                        <button class="action-btn delete-btn" data-code="{{ row.internal_code }}" title="Delete Report">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if not dtai_tickets and not dtas_tickets and not dtna_tickets and not dtsi_tickets and ((user_category != 'software' and user_category != 'admin') or not dtir_tickets) %}
+        {% if not mtse_tickets and not mtqa_tickets and not mtex_tickets and not mtrep_tickets %}
         <div class="no-tickets">
             <i class="fas fa-clipboard-list"></i>
-            <p>No tickets found. Create a new ticket to get started.</p>
+            <p>Não foram encontrados pedidos. Crie um novo pedido para começar.</p>
         </div>
         {% endif %}
+    </div>
 
-        <!-- New Ticket Modal -->
-        <div class="modal fade" id="newTicketModal" tabindex="-1" aria-labelledby="newTicketModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="newTicketModalLabel">
-                            <i class="fas fa-plus-circle"></i> Create New Ticket
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div id="ticketTypeSelection">
-                            <h6 class="mb-3 font-weight-bold">Select Ticket Type:</h6>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="ticket-type-card" data-type="DTAI">
-                                        <div class="ticket-type-icon">🤖</div>
-                                        <div class="ticket-type-title">Automation Improvement</div>
-                                        <div class="ticket-type-desc">Enhance existing automation processes and features to improve processes</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="ticket-type-card" data-type="DTAS">
-                                        <div class="ticket-type-icon">🦾</div>
-                                        <div class="ticket-type-title">Automation Support</div>
-                                        <div class="ticket-type-desc">Get support for automation issues <br>
-                                            <strong style="color: black; text-transform: uppercase; font-size: 10px;">(This tickets are for Maintenance Team Leaders only)</strong></div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="ticket-type-card" data-type="DTNA">
-                                        <div class="ticket-type-icon">🧑🏻‍💻</div>
-                                        <div class="ticket-type-title">New Platform Software Development/Idea</div>
-                                        <div class="ticket-type-desc">Request a New Platform Software Development/Idea</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="ticket-type-card" data-type="DTSI">
-                                        <div class="ticket-type-icon">🐛</div>
-                                        <div class="ticket-type-title">Platform Software Improvement/Bug/Issue</div>
-                                        <div class="ticket-type-desc">Report software bugs and issues</div>
-                                    </div>
-                                </div>
-                                {% if user_category == 'software' or user_category == 'admin' %}
-                                <div class="col-md-6 mb-3">
-                                    <div class="ticket-type-card" data-type="DTIR">
-                                        <div class="ticket-type-icon">🔐</div>
-                                        <div class="ticket-type-title">Software Internal Report</div>
-                                        <div class="ticket-type-desc">Internal report for software team only.</div>
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </div>
+    <!-- New Ticket Modal -->
+    <div class="modal fade" id="newTicketModal" tabindex="-1" aria-labelledby="newTicketModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newTicketModalLabel"><i class="fas fa-plus-circle"></i> Criar Novo Pedido</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="ticketTypeSelection">
+                        <h6 class="mb-3 font-weight-bold">Selecionar Tipo de Pedido:</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3"><div class="ticket-type-card" data-type="MTSE"><div class="ticket-type-icon">🛡️</div><div class="ticket-type-title">Segurança</div><div class="ticket-type-desc">Pedidos relacionados com segurança</div></div></div>
+                            <div class="col-md-6 mb-3"><div class="ticket-type-card" data-type="MTQA"><div class="ticket-type-icon">🎯</div><div class="ticket-type-title">Qualidade</div><div class="ticket-type-desc">Pedidos relacionados com qualidade</div></div></div>
+                            <div class="col-md-6 mb-3"><div class="ticket-type-card" data-type="MTEX"><div class="ticket-type-icon">⚙️</div><div class="ticket-type-title">Excelência Operacional</div><div class="ticket-type-desc">Pedidos de melhoria operacional</div></div></div>
+                            <div class="col-md-6 mb-3"><div class="ticket-type-card" data-type="MTREP"><div class="ticket-type-icon">⚡</div><div class="ticket-type-title">Reparações Eletrónicas</div><div class="ticket-type-desc">Pedidos de reparação eletrónica</div></div></div>
                         </div>
-                        <form id="newTicketForm" style="display: none;">
-                            <div class="row" id="dynamicFormFields"></div>
-                        </form>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-2"></i>Close
-                        </button>
-                        <button type="button" class="btn btn-secondary" id="backToSelection" style="display: none;">
-                            <i class="fas fa-arrow-left me-2"></i>Back to Selection
-                        </button>
-                        <button type="button" class="btn btn-primary" id="createTicketBtn" style="display: none;">
-                            <i class="fas fa-plus me-2"></i>Create Ticket
-                        </button>
-                    </div>
+                    <form id="newTicketForm" style="display: none;"><div class="row" id="dynamicFormFields"></div></form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancelar</button>
+                    <button type="button" class="btn btn-secondary" id="backToSelection" style="display: none;"><i class="fas fa-arrow-left me-2"></i>Voltar à Seleção</button>
+                    <button type="button" class="btn btn-primary" id="createTicketBtn" style="display: none;"><i class="fas fa-plus me-2"></i>Criar Pedido</button>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Ticket Details Modal -->
-        <div class="modal fade" id="ticketDetailModal" tabindex="-1" aria-labelledby="ticketDetailModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="ticketDetailModalLabel">
-                            <i class="fas fa-ticket-alt"></i> Ticket Details
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="ticket-details-container">
-                            <div class="ticket-details-header" id="ticketDetailsHeader"></div>
-                            <div id="ticketDetailsContent" class="row"></div>
-                            <!-- Notes Section -->
-                            <div id="ticketNotesSection" class="row mt-3" style="display: none;">
-                                <div class="col-md-12">
-                                    <div class="detail-label">Notes</div>
-                                    <div class="detail-value">
-                                        <textarea class="form-control" id="ticketNotes" name="notes" rows="3" readonly></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Observations/rejection reason will be injected by JS if status === -1 -->
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-2"></i>Close
-                        </button>
+    <!-- Ticket Details Modal -->
+    <div class="modal fade" id="ticketDetailModal" tabindex="-1" aria-labelledby="ticketDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ticketDetailModalLabel"><i class="fas fa-ticket-alt"></i> Detalhes do Pedido</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="ticket-details-container">
+                        <div class="ticket-details-header" id="ticketDetailsHeader"></div>
+                        <div id="ticketDetailsContent" class="row"></div>
+                        <div id="ticketNotesSection" class="row mt-3" style="display: none;"><div class="col-md-12"><div class="detail-label">Notas</div><div class="detail-value"><textarea class="form-control" id="ticketNotes" name="notes" rows="3" readonly></textarea></div></div></div>
                     </div>
                 </div>
+                <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Fechar</button></div>
             </div>
         </div>
+    </div>
 
-        <!-- Edit Ticket Modal -->
-        <div class="modal fade" id="editTicketModal" tabindex="-1" aria-labelledby="editTicketModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="editTicketModalLabel">
-                            <i class="fas fa-edit"></i> Edit Ticket
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form id="editTicketForm" method="POST" action="">
-                        <div class="modal-body">
-                            <div id="editTicketFields" class="row"></div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times me-2"></i>Cancel
-                            </button>
-                            <button type="submit" class="btn btn-primary" id="editSubmitBtn">
-                                <i class="fas fa-save me-2"></i>Save Changes
-                            </button>
-                        </div>
-                    </form>
+    <!-- Edit Ticket Modal -->
+    <div class="modal fade" id="editTicketModal" tabindex="-1" aria-labelledby="editTicketModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editTicketModalLabel"><i class="fas fa-edit"></i> Editar Pedido</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
+                <form id="editTicketForm" method="POST" action="">
+                    <div class="modal-body"><div id="editTicketFields" class="row"></div></div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="editSubmitBtn"><i class="fas fa-save me-2"></i>Guardar Alterações</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -608,179 +432,103 @@
                     }
                 }
 
+                const typeLabels = {
+                    'MTSE': 'Segurança',
+                    'MTQA': 'Qualidade',
+                    'MTEX': 'Excelência Operacional',
+                    'MTREP': 'Reparações Eletrónicas'
+                };
+
                 const safeValue = (value) => {
-                    if (value === null || value === undefined || value === '') {
-                        return 'N/A';
-                    }
+                    if (value === null || value === undefined || value === '') return 'N/A';
                     return escapeHtml(String(value));
                 };
 
-                const safeData = {
-                    internal_code: safeValue(parsedData.internal_code),
-                    title: safeValue(parsedData.title),
-                    requester: safeValue(parsedData.requester),
-                    prod_line: safeValue(parsedData.prod_line),
-                    n_sap: safeValue(parsedData.n_sap),
-                    reason: safeValue(parsedData.reason),
-                    current_process: safeValue(parsedData.current_process),
-                    action_to_improve: safeValue(parsedData.action_to_improve),
-                    observations_requester: safeValue(parsedData.observations_requester),
-                    department: safeValue(parsedData.department),
-                    objective: safeValue(parsedData.objective),
-                    app_name: safeValue(parsedData.app_name),
-                    issue: safeValue(parsedData.issue),
-                    expected_date: safeValue(parsedData.expected_date),
-                    status: parsedData.status !== null && parsedData.status !== undefined ? parseInt(parsedData.status) : 0,
-                    filename: safeValue(parsedData.filename),
-                    responsible: safeValue(parsedData.responsible),
-                    notes: safeValue(parsedData.notes),
-                    created_at: safeValue(parsedData.created_at),
-                    updated_at: safeValue(parsedData.updated_at),
-                    subcategory: safeValue(parsedData.subcategory),
-                    eight_d_number: safeValue(parsedData['8D_Number']),
-                    complaint_number: safeValue(parsedData.complaint_number),
-                    hard_savings: parsedData.hard_savings ? `€ ${parseFloat(parsedData.hard_savings).toLocaleString('pt-PT', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : 'N/A',
-                    other_description: safeValue(parsedData.other_description),
-                    priority: safeValue(parsedData.priority)
+                const formatDate = (dateValue) => {
+                    if (!dateValue) return 'N/A';
+                    if (typeof dateValue === 'string' && dateValue.includes('-')) {
+                        const parts = dateValue.split(' ')[0].split('-');
+                        if (parts.length === 3) {
+                            const [y, m, d] = parts;
+                            return `${d}/${m}/${y}`;
+                        }
+                    }
+                    return String(dateValue);
                 };
 
-                const getStatusBadge = (status) => {
-                    if (status === 0) return '<span class="status-badge status-waiting">Waiting</span>';
+                const getStatusBadge = (status, approved) => {
+                    if (status === 2) return '<span class="status-badge status-done">Done</span>';
                     if (status === 1) return '<span class="status-badge status-approved">In Progress</span>';
-                    if (status === 2) return '<span class="status-badge status-done">Completed</span>';
-                    if (status === 3) return '<span class="status-badge status-under-analysis">Under Analysis</span>';
-                    if (status === 4) return '<span class="status-badge status-in-progress">Waiting from DT</span>';
-                    if (status === 5) return '<span class="status-badge status-in-progress">Waiting from Requester</span>';
-                    if (status === 6) return '<span class="status-badge status-in-progress">Waiting for Line</span>';
-                    if (status === 7) return '<span class="status-badge status-in-progress">Waiting Maintenance</span>';
-                    if (status === -1) return '<span class="status-badge status-rejected">Rejected</span>';
-                    return '<span class="status-badge status-being-analyzed">Awaiting Approval</span>';
+                    return '<span class="status-badge status-waiting">To Do</span>';
                 };
 
                 const getFileDisplay = (filename) => {
-                    if (filename === 'N/A' || !filename) {
-                        return 'None';
-                    }
+                    if (!filename || filename === 'N/A') return 'Nenhum';
                     const extension = filename.split('.').pop().toLowerCase();
                     const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
                     const fileUrl = `/Uploads/${encodeURIComponent(filename)}`;
                     if (imageExtensions.includes(extension)) {
                         return `<a href="${fileUrl}" target="_blank"><img src="${fileUrl}" class="thumbnail" alt="${filename}"></a>`;
-                    } else {
-                        return `<a href="${fileUrl}" download>${filename}</a>`;
                     }
+                    return `<a href="${fileUrl}" download>${filename}</a>`;
                 };
 
-                const rejectionReason = safeValue(parsedData.observations || parsedData.rejection_reason || '');
+                const hasD3D7 = ticketType === 'MTSE' || ticketType === 'MTQA' || ticketType === 'MTEX';
+                const descriptionLabel = ticketType === 'MTREP' ? 'Descrição do Problema' : 'Descrição do Pretendido';
 
-                if (ticketType === 'DTAI') {
-                    headerText = `Automation Improvement (DTAI) - ${safeData.internal_code}`;
-                    content = `
-                        <div class="col-md-6"><div class="detail-label">Code</div><div class="detail-value">${safeData.internal_code}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Requester</div><div class="detail-value">${safeData.requester}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Category</div><div class="detail-value">${safeData.reason}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Production Line</div><div class="detail-value">${safeData.prod_line}</div></div>
-                        <div class="col-md-6"><div class="detail-label">SAP Nº</div><div class="detail-value">${safeData.n_sap}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Status</div><div class="detail-value">${getStatusBadge(safeData.status)}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Created At</div><div class="detail-value">${safeData.created_at}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Updated At</div><div class="detail-value">${safeData.updated_at}</div></div>
-                        <div class="col-md-6"><div class="detail-label">File</div><div class="detail-value">${getFileDisplay(safeData.filename)}</div></div>
-                        ${safeData.subcategory !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Subcategory</div><div class="detail-value">${safeData.subcategory}</div></div>` : ''}
-                        ${safeData.eight_d_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">8D Number</div><div class="detail-value">${safeData.eight_d_number}</div></div>` : ''}
-                        ${safeData.complaint_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Complaint Number</div><div class="detail-value">${safeData.complaint_number}</div></div>` : ''}
-                        ${safeData.hard_savings !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Hard Savings</div><div class="detail-value">${safeData.hard_savings}</div></div>` : ''}
-                        <div class="col-md-12"><div class="detail-label">Title</div><div class="detail-value">${safeData.title}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Current Process</div><div class="detail-value">${safeData.current_process}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Improvement Action</div><div class="detail-value">${safeData.action_to_improve}</div></div>
-                        ${safeData.other_description !== 'N/A' ? `<div class="col-md-12"><div class="detail-label">Additional Description</div><div class="detail-value">${safeData.other_description}</div></div>` : ''}
-                    `;
-                } else if (ticketType === 'DTAS') {
-                    headerText = `Automation Support (DTAS) - ${safeData.internal_code}`;
-                    content = `
-                        <div class="col-md-6"><div class="detail-label">Code</div><div class="detail-value">${safeData.internal_code}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Requester</div><div class="detail-value">${safeData.requester}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Category</div><div class="detail-value">${safeData.reason}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Production Line</div><div class="detail-value">${safeData.prod_line}</div></div>
-                        <div class="col-md-6"><div class="detail-label">SAP Nº</div><div class="detail-value">${safeData.n_sap}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Status</div><div class="detail-value">${getStatusBadge(safeData.status)}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Created At</div><div class="detail-value">${safeData.created_at}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Updated At</div><div class="detail-value">${safeData.updated_at}</div></div>
-                        <div class="col-md-6"><div class="detail-label">File</div><div class="detail-value">${getFileDisplay(safeData.filename)}</div></div>
-                        ${safeData.subcategory !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Subcategory</div><div class="detail-value">${safeData.subcategory}</div></div>` : ''}
-                        ${safeData.eight_d_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">8D Number</div><div class="detail-value">${safeData.eight_d_number}</div></div>` : ''}
-                        ${safeData.complaint_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Complaint Number</div><div class="detail-value">${safeData.complaint_number}</div></div>` : ''}
-                        ${safeData.hard_savings !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Hard Savings</div><div class="detail-value">${safeData.hard_savings}</div></div>` : ''}
-                        <div class="col-md-12"><div class="detail-label">Title</div><div class="detail-value">${safeData.title}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Current Process</div><div class="detail-value">${safeData.current_process}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Corrective Action</div><div class="detail-value">${safeData.action_to_improve}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Description</div><div class="detail-value">${safeData.observations_requester}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Machine Operational State</div><div class="detail-value">${safeData.machine_operational_state || 'N/A'}</div></div>
-                        ${safeData.other_description !== 'N/A' ? `<div class="col-md-12"><div class="detail-label">Additional Description</div><div class="detail-value">${safeData.other_description}</div></div>` : ''}
-                    `;
-                } else if (ticketType === 'DTNA') {
-                    headerText = `New Platform Software Development/Idea (DTNA) - ${safeData.internal_code}`;
-                    content = `
-                        <div class="col-md-6"><div class="detail-label">Code</div><div class="detail-value">${safeData.internal_code}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Requester</div><div class="detail-value">${safeData.requester}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Department</div><div class="detail-value">${safeData.department}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Reason</div><div class="detail-value">${safeData.reason}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Status</div><div class="detail-value">${getStatusBadge(safeData.status)}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Created At</div><div class="detail-value">${safeData.created_at}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Updated At</div><div class="detail-value">${safeData.updated_at}</div></div>
-                        <div class="col-md-6"><div class="detail-label">File</div><div class="detail-value">${getFileDisplay(safeData.filename)}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Title</div><div class="detail-value">${safeData.title}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Current Process</div><div class="detail-value">${safeData.current_process}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Objective</div><div class="detail-value">${safeData.objective}</div></div>
-                    `;
-                } else if (ticketType === 'DTSI') {
-                    headerText = `Platform Software Improvement/Bug/Issue (DTSI) - ${safeData.internal_code}`;
-                    content = `
-                        <div class="col-md-6"><div class="detail-label">Code</div><div class="detail-value">${safeData.internal_code}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Requester</div><div class="detail-value">${safeData.requester}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Application</div><div class="detail-value">${safeData.app_name}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Reason</div><div class="detail-value">${safeData.reason}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Status</div><div class="detail-value">${getStatusBadge(safeData.status)}</div></div>
-                        <div class="col-md-6"><div class="detail-label">File</div><div class="detail-value">${getFileDisplay(safeData.filename)}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Created At</div><div class="detail-value">${safeData.created_at}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Updated At</div><div class="detail-value">${safeData.updated_at}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Title</div><div class="detail-value">${safeData.title}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Issue</div><div class="detail-value">${safeData.issue}</div></div>
-                    `;
-                } else if (ticketType === 'DTIR') {
-                    const reporter = safeValue(parsedData.reporter);
-                    const description = safeValue(parsedData.description);
-                    headerText = `Software Internal Report (DTIR) - ${safeData.internal_code}`;
-                    content = `
-                        <div class="col-md-6"><div class="detail-label">Code</div><div class="detail-value">${safeData.internal_code}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Requester</div><div class="detail-value">${safeData.requester}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Requested By</div><div class="detail-value">${reporter}</div></div>
-                        ${safeData.priority !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Priority</div><div class="detail-value"><span class="badge bg-${safeData.priority === 'High' ? 'danger' : safeData.priority === 'Medium' ? 'warning' : 'secondary'}">${safeData.priority}</span></div></div>` : ''}
-                        <div class="col-md-6"><div class="detail-label">Status</div><div class="detail-value">${getStatusBadge(safeData.status)}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Created At</div><div class="detail-value">${safeData.created_at}</div></div>
-                        <div class="col-md-6"><div class="detail-label">Updated At</div><div class="detail-value">${safeData.updated_at}</div></div>
-                        <div class="col-md-6"><div class="detail-label">File</div><div class="detail-value">${getFileDisplay(safeData.filename)}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Title</div><div class="detail-value">${safeData.title}</div></div>
-                        <div class="col-md-12"><div class="detail-label">Description</div><div class="detail-value">${description}</div></div>
-                    `;
-                }
-
-                if (ticketType !== 'DTIR' && safeData.notes !== 'N/A' && safeData.notes.trim() !== '') {
-                    content += `
-                        <div class="col-12 mt-3">
-                            <div class="detail-label">Notes</div>
-                            <div class="detail-value">${safeData.notes}</div>
-                        </div>
-                    `;
-                }
-
-                if ((parsedData.status === -1 || parsedData.status === "-1") && rejectionReason && rejectionReason !== 'N/A') {
-                    content += `
-                        <div class="col-12 mt-3">
-                            <div class="detail-label">Rejection Reason</div>
-                            <div class="detail-value">${rejectionReason}</div>
-                        </div>
-                    `;
-                }
+                headerText = `${typeLabels[ticketType] || ticketType} - ${safeValue(parsedData.internal_code)}`;
+                content = `
+                    <div class="col-md-6">
+                        <div class="detail-label">Código</div>
+                        <div class="detail-value">${safeValue(parsedData.internal_code)}</div>
+                        <div class="detail-label">Tipo</div>
+                        <div class="detail-value">${typeLabels[ticketType] || ticketType}</div>
+                        <div class="detail-label">Título</div>
+                        <div class="detail-value">${safeValue(parsedData.title)}</div>
+                        <div class="detail-label">Linha</div>
+                        <div class="detail-value">${safeValue(parsedData.prod_line)}</div>
+                        <div class="detail-label">Equipamento</div>
+                        <div class="detail-value">${safeValue(parsedData.n_sap)}</div>
+                        <div class="detail-label">Requerente</div>
+                        <div class="detail-value">${safeValue(parsedData.requester_name || parsedData.requester)}</div>
+                        <div class="detail-label">Atualizado em</div>
+                        <div class="detail-value">${formatDate(parsedData.updated_at)}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detail-label">Estado</div>
+                        <div class="detail-value">${getStatusBadge(parsedData.status, parsedData.approved)}</div>
+                        <div class="detail-label">Responsável</div>
+                        <div class="detail-value">${safeValue(parsedData.responsible_name || parsedData.responsible)}</div>
+                        <div class="detail-label">Data Prevista</div>
+                        <div class="detail-value">${safeValue(parsedData.expected_date)}</div>
+                        ${hasD3D7 ? `
+                        <div class="detail-label">Nº de 8D</div>
+                        <div class="detail-value">${safeValue(parsedData.eight_d_number)}</div>
+                        <div class="detail-label">D3 / D7</div>
+                        <div class="detail-value">${parsedData.d3 ? 'D3 ✓' : ''} ${parsedData.d7 ? 'D7 ✓' : ''}</div>
+                        ` : ''}
+                        <div class="detail-label">CC Emails</div>
+                        <div class="detail-value">${safeValue(parsedData.cc_emails)}</div>
+                        <div class="detail-label">Criado em</div>
+                        <div class="detail-value">${formatDate(parsedData.created_at)}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">${descriptionLabel}</div>
+                        <div class="detail-value">${safeValue(parsedData.description)}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Notas</div>
+                        <div class="detail-value">${safeValue(parsedData.notes)}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Observações</div>
+                        <div class="detail-value">${safeValue(parsedData.observations)}</div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="detail-label">Anexo</div>
+                        <div class="detail-value">${getFileDisplay(parsedData.filename)}</div>
+                    </div>
+                `;
 
                 detailsHeader.innerHTML = headerText;
                 detailsContent.innerHTML = content;
@@ -789,29 +537,6 @@
                 detailsHeader.innerHTML = 'Error Loading Ticket';
                 detailsContent.innerHTML = '<div class="col-12"><p class="text-danger">Failed to load ticket details. Please try again.</p></div>';
             }
-        }
-        
-        // End of global functions
-        // Custom Toastr-like style for SweetAlert2
-        if (!document.getElementById('swal2-toastr-style')) {
-            const style = document.createElement('style');
-            style.id = 'swal2-toastr-style';
-            style.innerHTML = `
-            .swal2-toastr-popup {
-                min-width: 320px !important;
-                max-width: 400px !important;
-                box-shadow: 0 2px 12px rgba(0,0,0,0.15) !important;
-                border-radius: 6px !important;
-                padding: 0.75rem 1.25rem !important;
-                font-size: 1rem !important;
-            }
-            .swal2-toast .swal2-title {
-                margin: 0 !important;
-                font-size: 1rem !important;
-                font-weight: 500 !important;
-            }
-            `;
-            document.head.appendChild(style);
         }
 
         $(document).ready(function() {
@@ -922,7 +647,8 @@
             if (category === '') {
                 $('.table-section').show();
             } else {
-                $(`.table-section:has(#${category.toLowerCase()}Table)`).show();
+                const tableId = category.toLowerCase() + 'Table';
+                $(`.table-section:has(#${tableId})`).show();
             }
         }
 
@@ -937,273 +663,190 @@
             $('#backToSelection').show();
             $('#createTicketBtn').show();
 
-            if (ticketType === 'DTAI') {
-                actionUrl = "{{ url_for('addAutomationImprovement') }}";
+            if (ticketType === 'MTSE') {
+                actionUrl = "{{ url_for('addSeguranca') }}";
                 fields = `
                     <div class="col-md-12 mb-3">
-                        <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="title" id="title" placeholder="Ticket Title" required oninput="checkDuplicates('DTAI')">
+                        <label for="title" class="form-label">Título <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="title" id="title" placeholder="Título do pedido" required oninput="checkDuplicates('MTSE')">
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="prod_line" class="form-label">Production Line <span class="text-danger">*</span></label>
+                        <label for="prod_line" class="form-label">Linha <span class="text-danger">*</span></label>
                         <select class="form-select" name="prod_line" id="prod_line" required>
-                            <option value="">Select Product Line</option>
+                            <option value="">Selecionar Linha</option>
                             {% for row in lines %}
                             <option value="{{ row[0]|e }}">{{ row[0]|e }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="equipamentSAP" class="form-label">Equipment SAP Nº <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="equipamentSAP" id="equipamentSAP" placeholder="Equipment SAP Nº" required>
+                        <label for="equipamentSAP" class="form-label">Equipamento <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="equipamentSAP" id="equipamentSAP" placeholder="Número do equipamento" required>
                     </div>
                     <div class="col-md-12 mb-3">
-                        <label for="reason" class="form-label">Category <span class="text-danger">*</span></label>
-                        <select class="form-select" name="reason" id="reason" onchange="updateSubcategories('DTAI', this.value)" required>
-                            <option value="">Select Category</option>
-                            <option value="Security">🔒 Security</option>
-                            <option value="Quality">⭐ Quality</option>
-                            <option value="Productivity">📈 Productivity</option>
-                        </select>
-                    </div>
-                    <div class="col-md-12 mb-3" id="subcategory-container" style="display: none;">
-                        <label for="subcategory" class="form-label">Subcategory <span class="text-danger">*</span></label>
-                        <select class="form-select" name="subcategory" id="subcategory" onchange="showConditionalFields('DTAI', this.value)" required>
-                            <option value="">Select Subcategory</option>
-                        </select>
-                    </div>
-                    <div class="col-md-12 mb-3" id="8d-field" style="display: none;">
-                        <label for="8D_Number" class="form-label">8D Number <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="8D_Number" id="8D_Number" placeholder="Enter 8D Number">
-                    </div>
-                    <div class="col-md-12 mb-3" id="complaint-field" style="display: none;">
-                        <label for="complaint_number" class="form-label">Complaint Number <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="complaint_number" id="complaint_number" placeholder="Enter Complaint Number">
-                    </div>
-                    <div class="col-md-12 mb-3" id="hardsavings-field" style="display: none;">
-                        <label for="hard_savings" class="form-label">Hard Savings (€) <span class="text-danger">*</span></label>
-                        <input type="number" step="0.01" class="form-control" name="hard_savings" id="hard_savings" placeholder="Enter monetary value">
-                    </div>
-                    <div class="col-md-12 mb-3" id="other-description-field" style="display: none;">
-                        <label for="other_description" class="form-label">Description <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="other_description" id="other_description" placeholder="Enter detailed description" rows="3" maxlength="1000"></textarea>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="current_process" class="form-label">Current Process <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="current_process" id="current_process" placeholder="Describe the current process" rows="4" maxlength="450" required oninput="updateCharCount(this, 'cnt_dtai_cp')"></textarea>
-                        <small id="cnt_dtai_cp" class="text-muted">0 / 100 min characters</small>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="improvement" class="form-label">Improvement Action <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="improvement" id="improvement" placeholder="Describe the improvement action" rows="4" maxlength="450" required oninput="updateCharCount(this, 'cnt_dtai_imp')"></textarea>
-                        <small id="cnt_dtai_imp" class="text-muted">0 / 100 min characters</small>
+                        <label for="description" class="form-label">Descrição do Pretendido <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="description" id="description" placeholder="Descreva o que pretende" rows="4" maxlength="1000" required></textarea>
                     </div>
                     <div class="col-md-12 mb-3">
-                        <label for="image" class="form-label">Attach File (All file types allowed)</label>
+                        <label for="8D_Number" class="form-label">Nº de 8D (opcional)</label>
+                        <input type="text" class="form-control" name="8D_Number" id="8D_Number" placeholder="Número 8D">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">D3 / D7</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="d3" id="d3" value="1">
+                            <label class="form-check-label" for="d3">D3</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="d7" id="d7" value="1">
+                            <label class="form-check-label" for="d7">D7</label>
+                        </div>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label for="image" class="form-label">Anexos</label>
                         <input type="file" class="form-control" name="image" id="image" accept="*">
                     </div>
                     <div class="col-md-12 mb-3">
-                        <label for="cc_emails" class="form-label">CC (Optional) - Search users by name or username</label>
+                        <label for="cc_emails" class="form-label">CC (Opcional) - Pesquisar utilizadores por nome ou username</label>
                         <select class="form-select cc-select" name="cc_emails" id="cc_emails" multiple style="width: 100%"></select>
-                        <small class="form-text">Start typing to search users. Select multiple users. You can also add email addresses manually if needed.</small>
+                        <small class="form-text">Comece a digitar para pesquisar. Selecione múltiplos utilizadores.</small>
                     </div>
-                    <input type="hidden" name="internal_code" value="DTAI">
+                    <input type="hidden" name="internal_code" value="MTSE">
                 `;
-            } else if (ticketType === 'DTAS') {
-                actionUrl = "{{ url_for('addAutomationSupport') }}";
+            } else if (ticketType === 'MTQA') {
+                actionUrl = "{{ url_for('addQualidade') }}";
                 fields = `
-                <div class="alert alert-warning" role="alert">
-                    <p class="mb-1">Tickets created by Non-MTL (Maintenance Team Leaders) will not be accepted.</p>
-                    <p class="mb-0">To speed up the response time after opening the ticket, get in contact with the DT Leader or the automation technician responsible for the area.</p>
-                </div>
                     <div class="col-md-12 mb-3">
-                        <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="title" id="title" placeholder="Ticket Title" required oninput="checkDuplicates('DTAS')">
+                        <label for="title" class="form-label">Título <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="title" id="title" placeholder="Título do pedido" required oninput="checkDuplicates('MTQA')">
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="prod_line" class="form-label">Production Line <span class="text-danger">*</span></label>
+                        <label for="prod_line" class="form-label">Linha <span class="text-danger">*</span></label>
                         <select class="form-select" name="prod_line" id="prod_line" required>
-                            <option value="">Select Product Line</option>
+                            <option value="">Selecionar Linha</option>
                             {% for row in lines %}
                             <option value="{{ row[0]|e }}">{{ row[0]|e }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="equipamentSAP" class="form-label">Equipment SAP Nº <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="equipamentSAP" id="equipamentSAP" placeholder="Equipment SAP Nº" required>
+                        <label for="equipamentSAP" class="form-label">Equipamento <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="equipamentSAP" id="equipamentSAP" placeholder="Número do equipamento" required>
                     </div>
                     <div class="col-md-12 mb-3">
-                        <label for="reason" class="form-label">Category <span class="text-danger">*</span></label>
-                        <select class="form-select" name="reason" id="reason" onchange="updateSubcategories('DTAS', this.value)" required>
-                            <option value="">Select Category</option>
-                            <option value="Corrective">🤖 Corrective</option>
-                        </select>
-                    </div>
-                    <div class="col-md-12 mb-3" id="subcategory-container" style="display: none;">
-                        <label for="subcategory" class="form-label">Subcategory <span class="text-danger">*</span></label>
-                        <select class="form-select" name="subcategory" id="subcategory" onchange="showConditionalFields('DTAS', this.value)" required>
-                            <option value="">Select Subcategory</option>
-                        </select>
-                    </div>
-                    <div class="col-md-12 mb-3" id="8d-field" style="display: none;">
-                        <label for="8D_Number" class="form-label">8D Number <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="8D_Number" id="8D_Number" placeholder="Enter 8D Number">
-                    </div>
-                    <div class="col-md-12 mb-3" id="complaint-field" style="display: none;">
-                        <label for="complaint_number" class="form-label">Complaint Number <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="complaint_number" id="complaint_number" placeholder="Enter Complaint Number">
-                    </div>
-                    <div class="col-md-12 mb-3" id="hardsavings-field" style="display: none;">
-                        <label for="hard_savings" class="form-label">Hard Savings (€) <span class="text-danger">*</span></label>
-                        <input type="number" step="0.01" class="form-control" name="hard_savings" id="hard_savings" placeholder="Enter monetary value">
-                    </div>
-                    <div class="col-md-12 mb-3" id="other-description-field" style="display: none;">
-                        <label for="other_description" class="form-label">Description <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="other_description" id="other_description" placeholder="Enter detailed description" rows="3" maxlength="1000"></textarea>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="current_process" class="form-label">Current Process <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="current_process" id="current_process" placeholder="Describe the current process" rows="4" maxlength="450" required oninput="updateCharCount(this, 'cnt_dtas_cp')"></textarea>
-                        <small id="cnt_dtas_cp" class="text-muted">0 / 100 min characters</small>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="corrective_process" class="form-label">Corrective Action <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="corrective_process" id="corrective_process" placeholder="Describe the corrective action" rows="4" maxlength="450" required oninput="updateCharCount(this, 'cnt_dtas_ca')"></textarea>
-                        <small id="cnt_dtas_ca" class="text-muted">0 / 100 min characters</small>
+                        <label for="description" class="form-label">Descrição do Pretendido <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="description" id="description" placeholder="Descreva o que pretende" rows="4" maxlength="1000" required></textarea>
                     </div>
                     <div class="col-md-12 mb-3">
-                        <label for="observations" class="form-label">Description <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="observations" id="observations" placeholder="Describe the issue" rows="3" maxlength="1000" required></textarea>
+                        <label for="8D_Number" class="form-label">Nº de 8D (opcional)</label>
+                        <input type="text" class="form-control" name="8D_Number" id="8D_Number" placeholder="Número 8D">
                     </div>
                     <div class="col-md-12 mb-3">
-                        <label for="machine_operational_state" class="form-label">Machine Operational State <span class="text-danger">*</span></label>
-                        <select class="form-select" name="machine_operational_state" id="machine_operational_state" required>
-                            <option value="">Select State</option>
-                            <option value="Stopped">⏹️ Stopped</option>
-                            <option value="Intermittent">⚡ Intermittent</option>
-                            <option value="Degraded Mode">📉 Degraded Mode</option>
-                        </select>
+                        <label class="form-label">D3 / D7</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="d3" id="d3" value="1">
+                            <label class="form-check-label" for="d3">D3</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="d7" id="d7" value="1">
+                            <label class="form-check-label" for="d7">D7</label>
+                        </div>
                     </div>
                     <div class="col-md-12 mb-3">
-                        <label for="image" class="form-label">Attach File (All file types allowed)</label>
+                        <label for="image" class="form-label">Anexos</label>
                         <input type="file" class="form-control" name="image" id="image" accept="*">
                     </div>
                     <div class="col-md-12 mb-3">
-                        <label for="cc_emails" class="form-label">CC (Optional) - Search users by name or username</label>
+                        <label for="cc_emails" class="form-label">CC (Opcional) - Pesquisar utilizadores por nome ou username</label>
                         <select class="form-select cc-select" name="cc_emails" id="cc_emails" multiple style="width: 100%"></select>
-                        <small class="form-text">Start typing to search users. Select multiple users. You can also add email addresses manually if needed.</small>
+                        <small class="form-text">Comece a digitar para pesquisar. Selecione múltiplos utilizadores.</small>
                     </div>
-                    <input type="hidden" name="internal_code" value="DTAS">
+                    <input type="hidden" name="internal_code" value="MTQA">
                 `;
-            } else if (ticketType === 'DTNA') {
-                actionUrl = "{{ url_for('addNewApplication') }}";
+            } else if (ticketType === 'MTEX') {
+                actionUrl = "{{ url_for('addExcelenciaOperacional') }}";
                 fields = `
                     <div class="col-md-12 mb-3">
-                        <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="title" id="title" placeholder="Application Title" required oninput="checkDuplicates('DTNA')">
+                        <label for="title" class="form-label">Título <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="title" id="title" placeholder="Título do pedido" required oninput="checkDuplicates('MTEX')">
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="department" class="form-label">Department <span class="text-danger">*</span></label>
-                        <select class="form-select" name="department" id="department" required>
-                            <option value="">Select Department</option>
-                            <option value="Operacoes">Operações</option>
-                            <option value="Logistica">Logística</option>
-                            <option value="Qualidade">Qualidade</option>
-                            <option value="Manutencao">Manutenção</option>
-                            <option value="HR">HR</option>
-                            <option value="Financeiro">Financeiro</option>
-                            <option value="DT">DT</option>
-                            <option value="Other">Other</option>
+                        <label for="prod_line" class="form-label">Linha <span class="text-danger">*</span></label>
+                        <select class="form-select" name="prod_line" id="prod_line" required>
+                            <option value="">Selecionar Linha</option>
+                            {% for row in lines %}
+                            <option value="{{ row[0]|e }}">{{ row[0]|e }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="reason" class="form-label">Reason <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="reason" id="reason" placeholder="Reason for the new application request" rows="3" maxlength="450" required></textarea>
+                        <label for="equipamentSAP" class="form-label">Equipamento <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="equipamentSAP" id="equipamentSAP" placeholder="Número do equipamento" required>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="current_process" class="form-label">Current Process <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="current_process" id="current_process" placeholder="Describe the current process" rows="4" maxlength="450" required></textarea>
+                    <div class="col-md-12 mb-3">
+                        <label for="description" class="form-label">Descrição do Pretendido <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="description" id="description" placeholder="Descreva o que pretende" rows="4" maxlength="1000" required></textarea>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="objective" class="form-label">Objective <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="objective" id="objective" placeholder="Describe the objective and expected outcomes" rows="4" maxlength="450" required></textarea>
+                    <div class="col-md-12 mb-3">
+                        <label for="8D_Number" class="form-label">Nº de 8D (opcional)</label>
+                        <input type="text" class="form-control" name="8D_Number" id="8D_Number" placeholder="Número 8D">
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="image" class="form-label">Attach File (All file types allowed)</label>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">D3 / D7</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="d3" id="d3" value="1">
+                            <label class="form-check-label" for="d3">D3</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="d7" id="d7" value="1">
+                            <label class="form-check-label" for="d7">D7</label>
+                        </div>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label for="image" class="form-label">Anexos</label>
                         <input type="file" class="form-control" name="image" id="image" accept="*">
                     </div>
                     <div class="col-md-12 mb-3">
-                        <label for="cc_emails" class="form-label">CC (Optional) - Search users by name or username</label>
+                        <label for="cc_emails" class="form-label">CC (Opcional) - Pesquisar utilizadores por nome ou username</label>
                         <select class="form-select cc-select" name="cc_emails" id="cc_emails" multiple style="width: 100%"></select>
-                        <small class="form-text">Start typing to search users. Select multiple users. You can also add email addresses manually if needed.</small>
+                        <small class="form-text">Comece a digitar para pesquisar. Selecione múltiplos utilizadores.</small>
                     </div>
-                    <input type="hidden" name="internal_code" value="DTNA">
+                    <input type="hidden" name="internal_code" value="MTEX">
                 `;
-            } else if (ticketType === 'DTSI') {
-                actionUrl = "{{ url_for('addSoftwareIssue') }}";
+            } else if (ticketType === 'MTREP') {
+                actionUrl = "{{ url_for('addReparacoesEletronicas') }}";
                 fields = `
                     <div class="col-md-12 mb-3">
-                        <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="title" id="title" placeholder="Ticket Title" required oninput="checkDuplicates('DTSI')">
+                        <label for="title" class="form-label">Título <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="title" id="title" placeholder="Título do pedido" required oninput="checkDuplicates('MTREP')">
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="app" class="form-label">Application <span class="text-danger">*</span></label>
-                        <select class="form-select" name="app" id="app" required></select>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="reason" class="form-label">Reason <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="reason" id="reason" placeholder="Reason for the issue" required>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                        <label for="issue" class="form-label">Issue <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="issue" id="issue" placeholder="Describe the issue or problem" rows="4" maxlength="450" required></textarea>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="image" class="form-label">Attach File (All file types allowed)</label>
-                        <input type="file" class="form-control" name="image" id="image" accept="*">
-                    </div>
-                    <div class="col-md-12 mb-3">
-                        <label for="cc_emails" class="form-label">CC (Optional) - Search users by name or username</label>
-                        <select class="form-select cc-select" name="cc_emails" id="cc_emails" multiple style="width: 100%"></select>
-                        <small class="form-text">Start typing to search users. Select multiple users. You can also add email addresses manually if needed.</small>
-                    </div>
-                    <input type="hidden" name="internal_code" value="DTSI">
-                `;
-            } else if (ticketType === 'DTIR') {
-                actionUrl = "{{ url_for('addSoftwareInternalReport') }}";
-                fields = `
-                    <div class="col-md-12 mb-3">
-                        <label for="title" class="form-label">Report Title <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="title" id="title" placeholder="Internal report title" required oninput="checkDuplicates('DTIR')">
-                    </div>
-                    <div class="col-md-12 mb-3">
-                        <label for="reporter" class="form-label">Reported By <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" name="reporter" id="reporter" placeholder="Name of the person who reported this issue" required>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                        <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
-                        <textarea class="form-control" name="description" id="description" placeholder="Describe the internal report details" rows="5" maxlength="2000" required></textarea>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="priority" class="form-label">Priority</label>
-                        <select class="form-select" name="priority" id="priority">
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                            <option value="Low">Low</option>
+                        <label for="prod_line" class="form-label">Linha <span class="text-danger">*</span></label>
+                        <select class="form-select" name="prod_line" id="prod_line" required>
+                            <option value="">Selecionar Linha</option>
+                            {% for row in lines %}
+                            <option value="{{ row[0]|e }}">{{ row[0]|e }}</option>
+                            {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-12 mb-3">
-                        <label for="image" class="form-label">Attach Image/File</label>
-                        <input type="file" class="form-control" name="image" id="image" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">
-                        <small class="form-text">Supported: Images, PDF, Word, Excel</small>
+                    <div class="col-md-6 mb-3">
+                        <label for="equipamentSAP" class="form-label">Equipamento <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="equipamentSAP" id="equipamentSAP" placeholder="Número do equipamento" required>
                     </div>
                     <div class="col-md-12 mb-3">
-                        <label for="cc_emails" class="form-label">CC (Optional) - Search users by name or username</label>
+                        <label for="description" class="form-label">Descrição do Problema <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="description" id="description" placeholder="Descreva o problema" rows="4" maxlength="1000" required></textarea>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label for="image" class="form-label">Anexos</label>
+                        <input type="file" class="form-control" name="image" id="image" accept="*">
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label for="cc_emails" class="form-label">CC (Opcional) - Pesquisar utilizadores por nome ou username</label>
                         <select class="form-select cc-select" name="cc_emails" id="cc_emails" multiple style="width: 100%"></select>
-                        <small class="form-text">Start typing to search users. Select multiple users. You can also add email addresses manually if needed.</small>
+                        <small class="form-text">Comece a digitar para pesquisar. Selecione múltiplos utilizadores.</small>
                     </div>
-                    <input type="hidden" name="internal_code" value="DTIR">
+                    <input type="hidden" name="internal_code" value="MTREP">
                 `;
             } else {
                 fields = '';
@@ -1391,13 +1034,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Ou, se for por seleção de tipo (caso o modal já esteja aberto):
-    document.body.addEventListener('click', function(e) {
-        if (e.target.closest('.ticket-type-card[data-type="DTNA"]') || e.target.closest('.ticket-type-card[data-type="DTSI"]')) {
-            setTimeout(loadApplicationsToSelect, 100); // Aguarda renderizar o campo
-        }
-    });
 });
+
 
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.delete-btn').forEach(btn => {
@@ -1467,22 +1105,6 @@ document.addEventListener('DOMContentLoaded', function() {
             e.stopPropagation();
             
             const form = document.getElementById('newTicketForm');
-            
-            // Security Check: Verify user category for DTIR access
-            const internalCodeField = form.querySelector('[name="internal_code"]');
-            if (internalCodeField && internalCodeField.value === 'DTIR') {
-                const userCategory = '{{ user_category }}';
-                // Only category 'software' and 'admin' can create DTIR
-                if (userCategory !== 'software' && userCategory !== 'admin') {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Access Denied',
-                        text: 'You do not have permission to create Software Internal Reports (DTIR). Only Admin and Software users can access this feature.',
-                        confirmButtonText: 'OK'
-                    });
-                    return;
-                }
-            }
             
             // Validate required fields
             const requiredFields = form.querySelectorAll('[required]');
@@ -1593,10 +1215,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const formData = new FormData(form);
-            
+
             // Get action URL from the form's data-action attribute
             const actionUrl = form.getAttribute('data-action');
-            
+
             if (!actionUrl) {
                 Swal.fire({
                     toast: true,
@@ -1718,11 +1340,10 @@ function populateEditForm(ticketData) {
     // Determine ticket type based on internal_code prefix
     const code = ticketData.internal_code || '';
     let ticketType = '';
-    if (code.startsWith('DTAI')) ticketType = 'DTAI';
-    else if (code.startsWith('DTAS')) ticketType = 'DTAS';
-    else if (code.startsWith('DTNA')) ticketType = 'DTNA';
-    else if (code.startsWith('DTSI')) ticketType = 'DTSI';
-    else if (code.startsWith('DTIR')) ticketType = 'DTIR';
+    if (code.startsWith('MTSE')) ticketType = 'MTSE';
+    else if (code.startsWith('MTQA')) ticketType = 'MTQA';
+    else if (code.startsWith('MTEX')) ticketType = 'MTEX';
+    else if (code.startsWith('MTREP')) ticketType = 'MTREP';
 
     // Build form fields based on ticket type
     let fieldsHtml = '';
@@ -1748,39 +1369,18 @@ function populateEditForm(ticketData) {
         `;
 
         // Show only the main field for each ticket type + auto-change status to being_analyzed
-        if (ticketType === 'DTAI') {
+        if (ticketType === 'MTSE' || ticketType === 'MTQA' || ticketType === 'MTEX') {
             fieldsHtml += `
                 <div class="col-md-12 mb-3">
-                    <label for="edit_action_to_improve" class="form-label">Improvement Action *</label>
-                    <textarea class="form-control" name="action_to_improve" id="edit_action_to_improve" rows="6" required>${escapeHtml(ticketData.action_to_improve)}</textarea>
+                    <label for="edit_description" class="form-label">Descrição do Pretendido *</label>
+                    <textarea class="form-control" name="description" id="edit_description" rows="6" required>${escapeHtml(ticketData.description || ticketData.observations_requester || '')}</textarea>
                 </div>
             `;
-        } else if (ticketType === 'DTAS') {
+        } else if (ticketType === 'MTREP') {
             fieldsHtml += `
                 <div class="col-md-12 mb-3">
-                    <label for="edit_action_to_improve" class="form-label">Corrective Action *</label>
-                    <textarea class="form-control" name="action_to_improve" id="edit_action_to_improve" rows="6" required>${escapeHtml(ticketData.action_to_improve)}</textarea>
-                </div>
-            `;
-        } else if (ticketType === 'DTNA') {
-            fieldsHtml += `
-                <div class="col-md-12 mb-3">
-                    <label for="edit_objective" class="form-label">Objective *</label>
-                    <textarea class="form-control" name="objective" id="edit_objective" rows="6" required>${escapeHtml(ticketData.objective)}</textarea>
-                </div>
-            `;
-        } else if (ticketType === 'DTSI') {
-            fieldsHtml += `
-                <div class="col-md-12 mb-3">
-                    <label for="edit_issue" class="form-label">Issue Details *</label>
-                    <textarea class="form-control" name="issue" id="edit_issue" rows="6" required>${escapeHtml(ticketData.issue)}</textarea>
-                </div>
-            `;
-        } else if (ticketType === 'DTIR') {
-            fieldsHtml += `
-                <div class="col-md-12 mb-3">
-                    <label for="edit_description" class="form-label">Description *</label>
-                    <textarea class="form-control" name="description" id="edit_description" rows="6" required>${escapeHtml(ticketData.description)}</textarea>
+                    <label for="edit_description" class="form-label">Descrição do Problema *</label>
+                    <textarea class="form-control" name="description" id="edit_description" rows="6" required>${escapeHtml(ticketData.description || ticketData.observations_requester || '')}</textarea>
                 </div>
             `;
         }
@@ -1810,200 +1410,49 @@ function populateEditForm(ticketData) {
     `;
 
     // Type-specific fields
-    if (ticketType === 'DTAI') {
+    if (ticketType === 'MTSE' || ticketType === 'MTQA' || ticketType === 'MTEX') {
         fieldsHtml += `
             <div class="col-md-6 mb-3">
-                <label for="edit_prod_line" class="form-label">Production Line *</label>
+                <label for="edit_prod_line" class="form-label">Linha *</label>
                 <select class="form-select" name="prod_line" id="edit_prod_line" required>
-                    <option value="">Select Product Line</option>
+                    <option value="">Selecionar Linha</option>
                 </select>
             </div>
             <div class="col-md-6 mb-3">
-                <label for="edit_n_sap" class="form-label">Equipment SAP Nº *</label>
+                <label for="edit_n_sap" class="form-label">Equipamento *</label>
                 <input type="text" class="form-control" name="n_sap" id="edit_n_sap" value="${escapeHtml(ticketData.n_sap)}" required>
             </div>
             <div class="col-md-12 mb-3">
-                <label for="edit_reason" class="form-label">Category *</label>
-                <select class="form-select" name="reason" id="edit_reason" required>
-                    <option value="Security" ${ticketData.reason == 'Security' ? 'selected' : ''}>🔒 Security</option>
-                    <option value="Quality" ${ticketData.reason == 'Quality' ? 'selected' : ''}>⭐ Quality</option>
-                    <option value="Productivity" ${ticketData.reason == 'Productivity' ? 'selected' : ''}>📈 Productivity</option>
-                </select>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_subcategory" class="form-label">Subcategory</label>
-                <input type="text" class="form-control" name="subcategory" id="edit_subcategory" value="${escapeHtml(ticketData.subcategory)}">
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_current_process" class="form-label">Current Process *</label>
-                <textarea class="form-control" name="current_process" id="edit_current_process" rows="4" required>${escapeHtml(ticketData.current_process)}</textarea>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_action_to_improve" class="form-label">Improvement Action *</label>
-                <textarea class="form-control" name="action_to_improve" id="edit_action_to_improve" rows="4" required>${escapeHtml(ticketData.action_to_improve)}</textarea>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="edit_8D_Number">8D Number</label>
+                <label for="edit_8D_Number">Nº de 8D</label>
                 <input type="text" class="form-control" name="8D_Number" id="edit_8D_Number" value="${escapeHtml(ticketData['8D_Number'])}">
             </div>
-            <div class="col-md-6 mb-3">
-                <label for="edit_complaint_number">Complaint Number</label>
-                <input type="text" class="form-control" name="complaint_number" id="edit_complaint_number" value="${escapeHtml(ticketData.complaint_number)}">
+            <div class="col-md-12 mb-3">
+                <label for="edit_description" class="form-label">Descrição do Pretendido *</label>
+                <textarea class="form-control" name="description" id="edit_description" rows="4" required>${escapeHtml(ticketData.description || ticketData.observations_requester || '')}</textarea>
             </div>
             <div class="col-md-12 mb-3">
-                <label for="edit_hard_savings">Hard Savings (€)</label>
-                <input type="number" step="0.01" class="form-control" name="hard_savings" id="edit_hard_savings" value="${ticketData.hard_savings || ''}">
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_other_description">Additional Description</label>
-                <textarea class="form-control" name="other_description" id="edit_other_description" rows="3">${escapeHtml(ticketData.other_description)}</textarea>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_cc_emails">CC (Optional) - Search users</label>
+                <label for="edit_cc_emails">CC (Opcional)</label>
                 <select class="form-select cc-select" name="cc_emails" id="edit_cc_emails" multiple style="width: 100%" data-current="${escapeHtml(ticketData.cc_emails)}"></select>
-                <small class="form-text">Start typing to search users. Select multiple users.</small>
             </div>
         `;
-    } else if (ticketType === 'DTAS') {
+    } else if (ticketType === 'MTREP') {
         fieldsHtml += `
             <div class="col-md-6 mb-3">
-                <label for="edit_prod_line" class="form-label">Production Line *</label>
+                <label for="edit_prod_line" class="form-label">Linha *</label>
                 <select class="form-select" name="prod_line" id="edit_prod_line" required>
-                    <option value="">Select Product Line</option>
+                    <option value="">Selecionar Linha</option>
                 </select>
             </div>
             <div class="col-md-6 mb-3">
-                <label for="edit_n_sap" class="form-label">Equipment SAP Nº *</label>
-                <input type="text" class="form-control" name="equipamentSAP" id="edit_equipamentSAP" value="${escapeHtml(ticketData.n_sap)}" required>
+                <label for="edit_n_sap" class="form-label">Equipamento *</label>
+                <input type="text" class="form-control" name="n_sap" id="edit_n_sap" value="${escapeHtml(ticketData.n_sap)}" required>
             </div>
             <div class="col-md-12 mb-3">
-                <label for="edit_reason" class="form-label">Category *</label>
-                <select class="form-select" name="reason" id="edit_reason" required>
-                    <option value="Corrective" ${ticketData.reason == 'Corrective' ? 'selected' : ''}>🤖 Corrective</option>
-                </select>
+                <label for="edit_description" class="form-label">Descrição do Problema *</label>
+                <textarea class="form-control" name="description" id="edit_description" rows="4" required>${escapeHtml(ticketData.description || ticketData.observations_requester || '')}</textarea>
             </div>
             <div class="col-md-12 mb-3">
-                <label for="edit_subcategory" class="form-label">Subcategory</label>
-                <input type="text" class="form-control" name="subcategory" id="edit_subcategory" value="${escapeHtml(ticketData.subcategory)}">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="edit_current_process" class="form-label">Current Process *</label>
-                <textarea class="form-control" name="current_process" id="edit_current_process" rows="4" required>${escapeHtml(ticketData.current_process)}</textarea>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="edit_corrective_process" class="form-label">Corrective Action *</label>
-                <textarea class="form-control" name="corrective_process" id="edit_corrective_process" rows="4" required>${escapeHtml(ticketData.action_to_improve || ticketData.observations_requester)}</textarea>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_observations" class="form-label">Description *</label>
-                <textarea class="form-control" name="observations" id="edit_observations" rows="3" required>${escapeHtml(ticketData.observations_requester)}</textarea>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_machine_operational_state" class="form-label">Machine Operational State *</label>
-                <select class="form-select" name="machine_operational_state" id="edit_machine_operational_state" required>
-                    <option value="Stopped" ${ticketData.machine_operational_state == 'Stopped' ? 'selected' : ''}>⏹️ Stopped</option>
-                    <option value="Intermittent" ${ticketData.machine_operational_state == 'Intermittent' ? 'selected' : ''}>⚡ Intermittent</option>
-                    <option value="Degraded Mode" ${ticketData.machine_operational_state == 'Degraded Mode' ? 'selected' : ''}>📉 Degraded Mode</option>
-                </select>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="edit_8D_Number">8D Number</label>
-                <input type="text" class="form-control" name="8D_Number" id="edit_8D_Number" value="${escapeHtml(ticketData['8D_Number'])}">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="edit_complaint_number">Complaint Number</label>
-                <input type="text" class="form-control" name="complaint_number" id="edit_complaint_number" value="${escapeHtml(ticketData.complaint_number)}">
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_hard_savings">Hard Savings (€)</label>
-                <input type="number" step="0.01" class="form-control" name="hard_savings" id="edit_hard_savings" value="${ticketData.hard_savings || ''}">
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_other_description">Additional Description</label>
-                <textarea class="form-control" name="other_description" id="edit_other_description" rows="3">${escapeHtml(ticketData.other_description)}</textarea>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_cc_emails">CC (Optional) - Search users</label>
-                <select class="form-select cc-select" name="cc_emails" id="edit_cc_emails" multiple style="width: 100%" data-current="${escapeHtml(ticketData.cc_emails)}"></select>
-            </div>
-        `;
-    } else if (ticketType === 'DTNA') {
-        fieldsHtml += `
-            <div class="col-md-6 mb-3">
-                <label for="edit_department" class="form-label">Department *</label>
-                <select class="form-select" name="department" id="edit_department" required>
-                    <option value="Operacoes" ${ticketData.department == 'Operacoes' ? 'selected' : ''}>Operações</option>
-                    <option value="Logistica" ${ticketData.department == 'Logistica' ? 'selected' : ''}>Logística</option>
-                    <option value="Qualidade" ${ticketData.department == 'Qualidade' ? 'selected' : ''}>Qualidade</option>
-                    <option value="Manutencao" ${ticketData.department == 'Manutencao' ? 'selected' : ''}>Manutenção</option>
-                    <option value="HR" ${ticketData.department == 'HR' ? 'selected' : ''}>HR</option>
-                    <option value="Financeiro" ${ticketData.department == 'Financeiro' ? 'selected' : ''}>Financeiro</option>
-                    <option value="DT" ${ticketData.department == 'DT' ? 'selected' : ''}>DT</option>
-                    <option value="Other" ${ticketData.department == 'Other' ? 'selected' : ''}>Other</option>
-                </select>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="edit_reason" class="form-label">Reason *</label>
-                <textarea class="form-control" name="reason" id="edit_reason" rows="3" required>${escapeHtml(ticketData.reason)}</textarea>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="edit_current_process" class="form-label">Current Process *</label>
-                <textarea class="form-control" name="current_process" id="edit_current_process" rows="4" required>${escapeHtml(ticketData.current_process)}</textarea>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="edit_objective" class="form-label">Objective *</label>
-                <textarea class="form-control" name="objective" id="edit_objective" rows="4" required>${escapeHtml(ticketData.objective)}</textarea>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_cc_emails">CC (Optional) - Search users</label>
-                <select class="form-select cc-select" name="cc_emails" id="edit_cc_emails" multiple style="width: 100%" data-current="${escapeHtml(ticketData.cc_emails)}"></select>
-            </div>
-        `;
-    } else if (ticketType === 'DTSI') {
-        fieldsHtml += `
-            <div class="col-md-6 mb-3">
-                <label for="edit_app" class="form-label">Application *</label>
-                <select class="form-select" name="app" id="edit_app" required>
-                    <option value="">Select Application</option>
-                </select>
-            </div>
-            <div class="col-md-6 mb-3">
-                <label for="edit_reason" class="form-label">Reason *</label>
-                <input type="text" class="form-control" name="reason" id="edit_reason" value="${escapeHtml(ticketData.reason)}" required>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_issue" class="form-label">Issue *</label>
-                <textarea class="form-control" name="issue" id="edit_issue" rows="4" required>${escapeHtml(ticketData.issue)}</textarea>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_cc_emails">CC (Optional) - Search users</label>
-                <select class="form-select cc-select" name="cc_emails" id="edit_cc_emails" multiple style="width: 100%" data-current="${escapeHtml(ticketData.cc_emails)}"></select>
-            </div>
-        `;
-    } else if (ticketType === 'DTIR') {
-        fieldsHtml += `
-            <div class="col-md-12 mb-3">
-                <label for="edit_title" class="form-label">Report Title *</label>
-                <input type="text" class="form-control" name="title" id="edit_title" value="${escapeHtml(ticketData.title)}" required>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_reporter" class="form-label">Reported By *</label>
-                <input type="text" class="form-control" name="reporter" id="edit_reporter" value="${escapeHtml(ticketData.reporter)}" required>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_description" class="form-label">Description *</label>
-                <textarea class="form-control" name="description" id="edit_description" rows="5" required>${escapeHtml(ticketData.description)}</textarea>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_priority" class="form-label">Priority</label>
-                <select class="form-select" name="priority" id="edit_priority">
-                    <option value="Medium" ${ticketData.priority === 'Medium' ? 'selected' : ''}>Medium</option>
-                    <option value="High" ${ticketData.priority === 'High' ? 'selected' : ''}>High</option>
-                    <option value="Low" ${ticketData.priority === 'Low' ? 'selected' : ''}>Low</option>
-                </select>
-            </div>
-            <div class="col-md-12 mb-3">
-                <label for="edit_cc_emails">CC (Optional) - Search users</label>
+                <label for="edit_cc_emails">CC (Opcional)</label>
                 <select class="form-select cc-select" name="cc_emails" id="edit_cc_emails" multiple style="width: 100%" data-current="${escapeHtml(ticketData.cc_emails)}"></select>
             </div>
         `;
@@ -2011,8 +1460,8 @@ function populateEditForm(ticketData) {
 
     formContainer.innerHTML = fieldsHtml;
 
-    // Populate select options for production lines (DTAI/DTAS)
-    if (ticketType === 'DTAI' || ticketType === 'DTAS') {
+    // Populate select options for production lines
+    if (ticketType === 'MTSE' || ticketType === 'MTQA' || ticketType === 'MTEX' || ticketType === 'MTREP') {
         const prodLineSelect = document.getElementById('edit_prod_line');
         if (prodLineSelect && typeof lines !== 'undefined' && lines.length) {
             lines.forEach(row => {
@@ -2023,11 +1472,6 @@ function populateEditForm(ticketData) {
                 prodLineSelect.appendChild(opt);
             });
         }
-    }
-
-    // For DTSI, populate applications select
-    if (ticketType === 'DTSI') {
-        loadApplicationsToSelectEdit(ticketData.app_name);
     }
 }
 
@@ -2084,5 +1528,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
     </script>
-</body>
 {% endblock %}

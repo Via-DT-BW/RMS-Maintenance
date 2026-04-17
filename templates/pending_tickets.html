@@ -7,106 +7,99 @@
         <div class="top-controls">
             <div class="filter-section">
                 <div>
-                    <label class="form-label">Start Date</label>
+                    <label class="form-label">Data Início</label>
                     <input type="date" id="date_ini" name="date_ini" class="form-control">
                 </div>
                 <div>
-                    <label class="form-label">End Date</label>
+                    <label class="form-label">Data Fim</label>
                     <input type="date" id="date_fim" name="date_fim" class="form-control">
                 </div>
                 <div>
-                    <label class="form-label">Category</label>
+                    <label class="form-label">Filtrar por Categoria</label>
                     <select id="categoryFilter" class="form-select">
-                        <option value="">All Categories</option>
-                        <option value="DTAI">🔧 Automation Improvement</option>
-                        <option value="DTAS">🛠️ Automation Support</option>
-                        <option value="DTNA">📱 New Platform Software Development</option>
-                        <option value="DTSI">🐛 Platform Software Bug/Issue</option>
-                        <option value="DTIR">🔐 Software Internal Reports</option>
+                        <option value="">Todas as Categorias</option>
+                        <option value="MTSE">🛡️ Segurança</option>
+                        <option value="MTQA">🎯 Qualidade</option>
+                        <option value="MTEX">⚙️ Excelência Operacional</option>
+                        <option value="MTREP">⚡ Reparações Eletrónicas</option>
                     </select>
                 </div>
                 <button type="button" class="filter-btn" onclick="filterTable()">
-                    <i class="fas fa-search me-2"></i>Filter
+                    <i class="fas fa-search me-2"></i>Filtrar
                 </button>
             </div>
         </div>
 
-        {% set dtai = [] %}
-        {% set dtas = [] %}
-        {% set dtna = [] %}
-        {% set dtsi = [] %}
-        {% set dtir = [] %}
+        {% set mtse = [] %}
+        {% set mtqa = [] %}
+        {% set mtex = [] %}
+        {% set mtrep = [] %}
         {% for row in pending_requests %}
             {% set cleaned_row = {
                 'internal_code': row.internal_code | default(''),
                 'title': row.title | default(''),
                 'requester': row.requester | default(''),
-                'reporter': row.reporter | default(''),
+                'requester_name': row.requester_name | default(''),
+                'responsible': row.responsible | default(''),
+                'responsible_name': row.responsible_name | default(''),
                 'prod_line': row.prod_line | default(''),
                 'n_sap': row.n_sap | default(''),
-                'reason': row.reason | default(''),
-                'current_process': row.current_process | default(''),
-                'action_to_improve': row.action_to_improve | default(''),
-                'observations_requester': row.observations_requester | default(''),
-                'department': row.department | default(''),
-                'objective': row.objective | default(''),
-                'app_name': row.app_name | default(''),
-                'issue': row.issue | default(''),
+                'description': row.description | default(''),
                 'expected_date': row.expected_date | default(''),
                 'status': row.status if row.status is not none else 0,
                 'filename': row.filename | default(''),
-                'responsible': row.responsible | default(''),
-                'created_at': row.created_at,
-                'updated_at': row.updated_at,
-                'notes': row.notes | default('')
+                'notes': row.notes | default(''),
+                'observations': row.observations | default(''),
+                'line': row.line | default(''),
+                'equipment': row.equipment | default(''),
+                'created_at': row.created_at | default(''),
+                'updated_at': row.updated_at | default(''),
+                'category': row.category | default('')
             } %}
-            {% if row.internal_code.startswith('DTAI') %}
-                {% set _ = dtai.append(cleaned_row) %}
-            {% elif row.internal_code.startswith('DTAS') %}
-                {% set _ = dtas.append(cleaned_row) %}
-            {% elif row.internal_code.startswith('DTNA') %}
-                {% set _ = dtna.append(cleaned_row) %}
-            {% elif row.internal_code.startswith('DTSI') %}
-                {% set _ = dtsi.append(cleaned_row) %}
-            {% elif row.internal_code.startswith('DTIR') %}
-                {% set _ = dtir.append(cleaned_row) %}
+            {% if row.internal_code.startswith('MTSE') %}
+                {% set _ = mtse.append(cleaned_row) %}
+            {% elif row.internal_code.startswith('MTQA') %}
+                {% set _ = mtqa.append(cleaned_row) %}
+            {% elif row.internal_code.startswith('MTEX') %}
+                {% set _ = mtex.append(cleaned_row) %}
+            {% elif row.internal_code.startswith('MTREP') %}
+                {% set _ = mtrep.append(cleaned_row) %}
             {% endif %}
         {% endfor %}
 
         {% for cat, tickets, table_id, extra in [
-            ('DTAI', dtai, 'dtaiTable', 'prod_line'),
-            ('DTAS', dtas, 'dtasTable', 'prod_line'),
-            ('DTNA', dtna, 'dtnaTable', 'department'),
-            ('DTSI', dtsi, 'dtsiTable', 'app_name')
+            ('MTSE', mtse, 'mtseTable', 'line'),
+            ('MTQA', mtqa, 'mtqaTable', 'line'),
+            ('MTEX', mtex, 'mtexTable', 'line'),
+            ('MTREP', mtrep, 'mtrepTable', 'equipment')
         ] %}
         {% if tickets %}
         <div class="table-section" data-category="{{ cat }}">
             <h2>
-                {{ cat == 'DTAI' and 'Automation Improvement (DTAI)' or
-                cat == 'DTAS' and 'Automation Support (DTAS)' or
-                cat == 'DTNA' and 'New Platform Software Development (DTNA)' or
-                cat == 'DTSI' and 'Platform Software Bug/Issue (DTSI)' or
-                cat == 'DTIR' and 'Software Internal Reports (DTIR)' }}
-                <span class="table-info">{{ tickets|length }} tasks</span>
+                {{ cat == 'MTSE' and 'Segurança (MTSE)' or
+                cat == 'MTQA' and 'Qualidade (MTQA)' or
+                cat == 'MTEX' and 'Excelência Operacional (MTEX)' or
+                cat == 'MTREP' and 'Reparações Eletrónicas (MTREP)' }}
+                <span class="table-info">{{ tickets|length }} tarefas</span>
             </h2>
             <div class="data-table">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0" id="{{ table_id }}">
                         <thead>
                             <tr>
-                                <th>Code</th>
-                                <th>Title</th>
-                                <th>Requester</th>
+                                <th>Código</th>
+                                <th>Título</th>
+                                <th>Requerente</th>
                                 <th>
-                                    {% if cat in ['DTAI', 'DTAS'] %}Line{% elif cat == 'DTNA' %}Department{% else %}Application{% endif %}
+                                    {% if cat in ['MTSE', 'MTQA', 'MTEX'] %}Linha{% else %}Equipamento{% endif %}
                                 </th>
-                                <th>Expected Date</th>
-                                <th>Status</th>
-                                <th>Responsible</th>
-                                <th>Created At</th>
-                                <th>Updated At</th>
-                                <th>Details</th>
-                                <th>Actions</th>
+                                <th>Data Prevista</th>
+                                <th>Estado</th>
+                                <th>Responsável</th>
+                                <th>Criado Em</th>
+                                <th>Atualizado Em</th>
+                                <th>Detalhes</th>
+                                <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -117,46 +110,30 @@
                                 <td>{{ row.requester }}</td>
                                 <td class="truncate-text" data-full-text="{{ row[extra] }}">{{ row[extra] }}</td>
                                 <td>
-                                    {% if row.status == 3 %}
-                                        <span class="status-badge status-under-analysis">Under Analysis</span>
-                                    {% elif row.expected_date == '' or row.expected_date == 'Being analyzed' %}
-                                        <span class="status-badge status-being-analyzed">Being analyzed</span>
-                                    {% else %}
-                                        {{ row.expected_date }}
-                                    {% endif %}
+                                    {{ row.expected_date if row.expected_date else 'N/D' }}
                                 </td>
                                 <td>
                                     {% if row.status == 0 %}
-                                        <span class="status-badge status-waiting">Waiting</span>
+<span class="status-badge status-waiting">To Do</span>
                                     {% elif row.status == 1 %}
                                         <span class="status-badge status-approved">In Progress</span>
-                                    {% elif row.status == 3 %}
-                                        <span class="status-badge status-under-analysis">Under Analysis</span>
-                                    {% elif row.status == 4 %}
-                                        <span class="status-badge" style="background-color: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 4px;">Waiting from DT</span>
-                                    {% elif row.status == 5 %}
-                                        <span class="status-badge" style="background-color: #fff3e0; color: #f57c00; padding: 4px 8px; border-radius: 4px;">Waiting from Requester</span>
-                                    {% elif row.status == 6 %}
-                                        <span class="status-badge" style="background-color: #e0f2f1; color: #00897b; padding: 4px 8px; border-radius: 4px;">Waiting for Line</span>
-                                    {% elif row.status == 7 %}
-                                        <span class="status-badge" style="background-color: #f3e5f5; color: #7b1fa2; padding: 4px 8px; border-radius: 4px;">Waiting Maintenance</span>
                                     {% else %}
-                                        <span class="status-badge status-waiting">Waiting</span>
+                                        <span class="status-badge status-waiting">Standby</span>
                                     {% endif %}
                                 </td>
-                                <td class="truncate-text" data-full-text="{{ row.responsible | default('') }}">{{ row.responsible | default('N/A') }}</td>
+                                <td class="truncate-text" data-full-text="{{ row.responsible | default('') }}">{{ row.responsible | default('N/D') }}</td>
                                 <td>
                                     {% if row.created_at %}
-                                        {{ row.created_at.strftime('%d-%m-%Y %H:%M') if row.created_at.__class__.__name__ == 'datetime' else row.created_at }}
+                                        {{ row.created_at[:16] if row.created_at else 'N/D' }}
                                     {% else %}
-                                        N/A
+                                        N/D
                                     {% endif %}
                                 </td>
                                 <td>
                                     {% if row.updated_at %}
-                                        {{ row.updated_at.strftime('%d-%m-%Y %H:%M') if row.updated_at.__class__.__name__ == 'datetime' else row.updated_at }}
+                                        {{ row.updated_at[:16] if row.updated_at else 'N/D' }}
                                     {% else %}
-                                        N/A
+                                        N/D
                                     {% endif %}
                                 </td>
                                 <td>
@@ -167,30 +144,18 @@
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        {% if row.status == 3 %}
-                                            <!-- Under Analysis status: only show approve to waiting button -->
-                                            <button type="button" class="action-btn approve-btn" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#approve_to_waiting_Modal" 
-                                                    onclick="setModalData('{{ row.internal_code }}', 'approve_to_waiting')" 
-                                                    title="Approve to Waiting">
-                                                <i class="fas fa-check"></i>
-                                            </button>
-                                        {% else %}
-                                            <!-- Normal status: show edit and conclude buttons -->
-                                            <button type="button" class="action-btn edit" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#edit_Modal" 
-                                                    onclick="setModalData('{{ row.internal_code }}', 'edit')" 
-                                                    title="Edit Task">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                        {% endif %}
+                                        <button type="button" class="action-btn edit" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#edit_Modal" 
+                                                onclick="setModalData('{{ row.internal_code }}', 'edit')" 
+                                                title="Editar Tarefa">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
                                         <button type="button" class="action-btn conclude" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#concluded_Modal" 
                                                 onclick="setModalData('{{ row.internal_code }}', 'concluded')" 
-                                                title="Mark as Completed">
+                                                title="Mark as Done">
                                             <i class="fas fa-check-circle"></i>
                                         </button>
                                     </div>
@@ -205,130 +170,10 @@
         {% endif %}
         {% endfor %}
 
-        <!-- DTIR Section (Software Internal Reports) -->
-        {% if dtir %}
-        <div class="table-section" data-category="DTIR">
-            <h2>
-                Software Internal Reports (DTIR)
-                <span class="table-info">{{ dtir|length }} tasks</span>
-            </h2>
-            <div class="data-table">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0" id="dtirTable">
-                        <thead>
-                            <tr>
-                                <th>Code</th>
-                                <th>Title</th>
-                                <th>Requester</th>
-                                <th>Requested By</th>
-                                <th>Expected Date</th>
-                                <th>Status</th>
-                                <th>Responsible</th>
-                                <th>Created At</th>
-                                <th>Updated At</th>
-                                <th>Details</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in dtir %}
-                            <tr>
-                                <td><span class="badge-code">{{ row.internal_code }}</span></td>
-                                <td class="truncate-text" data-full-text="{{ row.title }}">{{ row.title }}</td>
-                                <td>{{ row.requester }}</td>
-                                <td>{{ row.reporter or '' }}</td>
-                                <td>
-                                    {% if row.status == 3 %}
-                                        <span class="status-badge status-under-analysis">Under Analysis</span>
-                                    {% elif row.expected_date == '' or row.expected_date == 'Being analyzed' %}
-                                        <span class="status-badge status-being-analyzed">Being analyzed</span>
-                                    {% else %}
-                                        {{ row.expected_date }}
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if row.status == 0 %}
-                                        <span class="status-badge status-waiting">Waiting</span>
-                                    {% elif row.status == 1 %}
-                                        <span class="status-badge status-approved">In Progress</span>
-                                    {% elif row.status == 3 %}
-                                        <span class="status-badge status-under-analysis">Under Analysis</span>
-                                    {% elif row.status == 4 %}
-                                        <span class="status-badge" style="background-color: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 4px;">Waiting from DT</span>
-                                    {% elif row.status == 5 %}
-                                        <span class="status-badge" style="background-color: #fff3e0; color: #f57c00; padding: 4px 8px; border-radius: 4px;">Waiting from Requester</span>
-                                    {% elif row.status == 6 %}
-                                        <span class="status-badge" style="background-color: #e0f2f1; color: #00897b; padding: 4px 8px; border-radius: 4px;">Waiting for Line</span>
-                                    {% elif row.status == 7 %}
-                                        <span class="status-badge" style="background-color: #f3e5f5; color: #7b1fa2; padding: 4px 8px; border-radius: 4px;">Waiting Maintenance</span>
-                                    {% else %}
-                                        <span class="status-badge status-waiting">Waiting</span>
-                                    {% endif %}
-                                </td>
-                                <td class="truncate-text" data-full-text="{{ row.responsible | default('') }}">{{ row.responsible | default('N/A') }}</td>
-                                <td>
-                                    {% if row.created_at %}
-                                        {{ row.created_at.strftime('%d-%m-%Y %H:%M') if row.created_at.__class__.__name__ == 'datetime' else row.created_at }}
-                                    {% else %}
-                                        N/A
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if row.updated_at %}
-                                        {{ row.updated_at.strftime('%d-%m-%Y %H:%M') if row.updated_at.__class__.__name__ == 'datetime' else row.updated_at }}
-                                    {% else %}
-                                        N/A
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <i class="fas fa-eye detail-icon"
-                                       data-bs-toggle="modal"
-                                       data-bs-target="#ticketDetailModal"
-                                       onclick='showTicketDetails("DTIR", {{ row|tojson|safe }})'></i>
-                                </td>
-                                <td>
-                                    <div class="action-buttons">
-                                        {% if row.status == 3 %}
-                                            <!-- Under Analysis status: only show approve to waiting button -->
-                                            <button type="button" class="action-btn approve-btn" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#approve_to_waiting_Modal" 
-                                                    onclick="setModalData('{{ row.internal_code }}', 'approve_to_waiting')" 
-                                                    title="Approve to Waiting">
-                                                <i class="fas fa-check"></i>
-                                            </button>
-                                        {% else %}
-                                            <!-- Normal status: show edit and conclude buttons -->
-                                            <button type="button" class="action-btn edit" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#edit_Modal" 
-                                                    onclick="setModalData('{{ row.internal_code }}', 'edit')" 
-                                                    title="Edit Task">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                        {% endif %}
-                                        <button type="button" class="action-btn conclude" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#concluded_Modal" 
-                                                onclick="setModalData('{{ row.internal_code }}', 'concluded')" 
-                                                title="Mark as Completed">
-                                            <i class="fas fa-check-circle"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if not dtai and not dtas and not dtna and not dtsi and not dtir %}
+        {% if not pending_requests %}
         <div class="no-tickets">
             <i class="fas fa-clipboard-list"></i>
-            <p>No tasks in progress. All approved requests have been completed.</p>
+            <p>Sem tarefas em progresso. Todos os pedidos aprovados foram concluídos.</p>
         </div>
         {% endif %}
 
@@ -337,22 +182,11 @@
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="ticketDetailModalLabel">
-                            <i class="fas fa-ticket-alt"></i> Task Details
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h5 class="modal-title" id="ticketDetailModalLabel"><i class="fas fa-ticket-alt"></i> Detalhes da Tarefa</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                     </div>
-                    <div class="modal-body">
-                        <div class="ticket-details-container">
-                            <div class="ticket-details-header" id="ticketDetailsHeader"></div>
-                            <div id="ticketDetailsContent" class="row"></div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-2"></i>Close
-                        </button>
-                    </div>
+                    <div class="modal-body"><div class="ticket-details-container"><div class="ticket-details-header" id="ticketDetailsHeader"></div><div id="ticketDetailsContent" class="row"></div></div></div>
+                    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Fechar</button></div>
                 </div>
             </div>
         </div>
@@ -362,52 +196,19 @@
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="approveToWaitingModalLabel">
-                            <i class="fas fa-check"></i> Approve to Waiting
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h5 class="modal-title" id="approveToWaitingModalLabel"><i class="fas fa-check"></i> Aprovar para Espera</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                     </div>
                     <form id="approveToWaitingForm" method="POST" action="{{ url_for('edit_task') }}">
                         <div class="modal-body">
-                            <div class="detail-label">Internal Code</div>
-                            <div class="detail-value">
-                                <input type="text" class="form-control" name="request_code" id="approve_waiting_request_code_input" readonly />
-                            </div>
-                            <div class="detail-label">Expected Date</div>
-                            <div class="detail-value">
-                                <input type="date" class="form-control" id="approve_waiting_expected_date" name="expected_date" required>
-                            </div>
-                            <div class="detail-label">Responsible</div>
-                            <div class="detail-value">
-                                <select class="form-control" id="approve_waiting_responsible" name="responsible" required>
-                                    <option value="">Select Responsible</option>
-                                    <!-- Populated dynamically -->
-                                </select>
-                            </div>
-                            <div class="detail-label">Notes (optional)</div>
-                            <div class="detail-value">
-                                <textarea class="form-control" name="notes" id="approve_waiting_notes" rows="2" placeholder="Add any notes if needed..."></textarea>
-                            </div>
-                            <div class="detail-value mt-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="add_to_week_plan" id="approve_waiting_add_to_week_plan" value="1">
-                                    <label class="form-check-label" for="approve_waiting_add_to_week_plan">
-                                        <i class="fas fa-calendar-plus me-1"></i> Add this task to my Week Plan automatically
-                                    </label>
-                                </div>
-                            </div>
-                            <!-- Hidden status field set to 0 (Waiting) and approved to 1 -->
-                            <input type="hidden" name="status" value="0">
-                            <input type="hidden" name="approved" value="1">
+                            <div class="detail-label">Código Interno</div><div class="detail-value"><input type="text" class="form-control" name="request_code" id="approve_waiting_request_code_input" readonly /></div>
+                            <div class="detail-label">Data Prevista</div><div class="detail-value"><input type="date" class="form-control" id="approve_waiting_expected_date" name="expected_date" required /></div>
+                            <div class="detail-label">Responsável</div><div class="detail-value"><select class="form-control" id="approve_waiting_responsible" name="responsible" required><option value="">Selecionar Responsável</option></select></div>
+                            <div class="detail-label">Notas (opcional)</div><div class="detail-value"><textarea class="form-control" name="notes" id="approve_waiting_notes" rows="2" placeholder="Adicionar notas se necessário..."></textarea></div>
+                            <div class="detail-value mt-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="add_to_week_plan" id="approve_waiting_add_to_week_plan" value="1"><label class="form-check-label" for="approve_waiting_add_to_week_plan"><i class="fas fa-calendar-plus me-1"></i> Adicionar esta tarefa ao meu Plano Semanal automaticamente</label></div></div>
+                            <input type="hidden" name="status" value="0"><input type="hidden" name="approved" value="1">
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times me-2"></i>Close
-                            </button>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-check me-2"></i>Approve to Waiting
-                            </button>
-                        </div>
+                        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancelar</button><button type="submit" class="btn btn-primary"><i class="fas fa-check me-2"></i>Aprovar para Espera</button></div>
                     </form>
                 </div>
             </div>
@@ -417,54 +218,23 @@
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="concludeModalLabel">
-                            <i class="fas fa-check-circle"></i> Complete Ticket
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h5 class="modal-title" id="concludeModalLabel"><i class="fas fa-check-circle"></i> Concluir Pedido</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                     </div>
                     <form id="concludeForm" method="POST" action="{{ url_for('conclude_request') }}">
                         <div class="modal-body">
-                            <div class="detail-label">Internal Code</div>
+                            <div class="detail-label">Código Interno</div><div class="detail-value"><input type="text" class="form-control" name="request_code" id="approve_request_code_input" readonly /></div>
+                            <div class="detail-label">Data de Início</div><div class="detail-value"><input type="date" class="form-control" id="start_date" name="start_date" required /></div>
+                            <div class="detail-label">Data de Fim</div><div class="detail-value"><input type="date" class="form-control" id="end_date" name="end_date" required /></div>
+                            <div class="detail-label">Tempo (horas)</div>
                             <div class="detail-value">
-                                <input type="text" class="form-control" name="request_code" id="approve_request_code_input" readonly />
+                                <input type="number" class="form-control" id="time" name="time" min="1" step="1" required />
+                                <small class="text-info mt-2 d-block"><i class="fas fa-info-circle"></i> As horas das tarefas serão adicionadas automaticamente a este valor</small>
+                                <div id="taskHoursSummary" class="alert alert-light mt-3" style="display: none;"><strong>Tarefas Associadas:</strong><div id="taskHoursList" style="margin-top: 10px; max-height: 150px; overflow-y: auto;"></div><div class="mt-2 pt-2 border-top"><strong>Total das tarefas: <span id="totalTaskHours">0</span> horas</strong></div></div>
                             </div>
-                            
-                            <div class="detail-label">Start Date</div>
-                            <div class="detail-value">
-                                <input type="date" class="form-control" id="start_date" name="start_date" required>
-                            </div>
-                            
-                            <div class="detail-label">End Date</div>
-                            <div class="detail-value">
-                                <input type="date" class="form-control" id="end_date" name="end_date" required>
-                            </div>
-                            
-                            <div class="detail-label">Time (hours)</div>
-                            <div class="detail-value">
-                                <input type="number" class="form-control" id="time" name="time" min="1" step="1" required>
-                                <small class="text-info mt-2 d-block"><i class="fas fa-info-circle"></i> Tasks hours will be automatically added to this value</small>
-                                <div id="taskHoursSummary" class="alert alert-light mt-3" style="display: none;">
-                                    <strong>Tasks Associated:</strong>
-                                    <div id="taskHoursList" style="margin-top: 10px; max-height: 150px; overflow-y: auto;"></div>
-                                    <div class="mt-2 pt-2 border-top">
-                                        <strong>Total from tasks: <span id="totalTaskHours">0</span> hours</strong>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="detail-label">Observations</div>
-                            <div class="detail-value">
-                                <textarea class="form-control" id="observations" name="observations" maxlength="450" rows="4" required></textarea>
-                            </div>
+                            <div class="detail-label">Observações</div><div class="detail-value"><textarea class="form-control" id="observations" name="observations" maxlength="450" rows="4" required></textarea></div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times me-2"></i>Close
-                            </button>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-check me-2"></i>Complete Ticket
-                            </button>
-                        </div>
+                        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancelar</button><button type="submit" class="btn btn-primary"><i class="fas fa-check me-2"></i>Concluir Pedido</button></div>
                     </form>
                 </div>
             </div>
@@ -475,48 +245,40 @@
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="editModalLabel">
-                            <i class="fas fa-edit"></i> Edit Task
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h5 class="modal-title" id="editModalLabel"><i class="fas fa-edit"></i> Editar Tarefa</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                     </div>
                     <form id="editForm" method="POST" action="{{ url_for('edit_task') }}">
                         <input type="hidden" name="request_code" id="edit_request_code">
                         <div class="modal-body">
-                            <div class="detail-label">Status</div>
-                            <div class="detail-value">
+                            <div class="detail-label">Estado</div><div class="detail-value">
                                 <select class="form-control status-select" id="edit_status" name="status" required onchange="updateStatusSelectStyle()">
-                                    <option value="0">Waiting</option>
+                                    <option value="0">To Do</option>
                                     <option value="1">In Progress</option>
-                                    <option value="3">Under Analysis</option>
-                                    <option value="4">Waiting from DT</option>
-                                    <option value="5">Waiting from Requester</option>
-                                    <option value="6">Waiting for Line Availability</option>
-                                    <option value="7">Waiting Maintenance Action</option>
                                 </select>
                             </div>
 
-                            <div class="detail-label">Expected Date</div>
+                            <div class="detail-label">Data Prevista</div>
                             <div class="detail-value">
                                 <input type="date" class="form-control" id="edit_expected_date" name="expected_date">
                             </div>
 
-                            <div class="detail-label">Responsible</div>
+                            <div class="detail-label">Responsável</div>
                             <div class="detail-value">
                                 <input type="text" class="form-control" id="edit_responsible" name="responsible">
                             </div>
 
-                            <div class="detail-label">Notes</div>
+                            <div class="detail-label">Notas</div>
                             <div class="detail-value">
-                                <textarea class="form-control" id="edit_notes" name="notes" rows="3" placeholder="Add notes..."></textarea>
+                                <textarea class="form-control" id="edit_notes" name="notes" rows="3" placeholder="Adicionar notas..."></textarea>
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times me-2"></i>Cancel
+                                <i class="fas fa-times me-2"></i>Cancelar
                             </button>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>Save Changes
+                                <i class="fas fa-save me-2"></i>Guardar Alterações
                             </button>
                         </div>
                     </form>
@@ -699,7 +461,7 @@
                 const data = await response.json();
                 if (data.success) {
                     responsibleOptions = [
-                        { value: '', label: 'Select Responsible' },
+                        { value: '', label: 'Selecionar Responsável' },
                         ...data.users.map(user => ({
                             value: user.username,
                             label: user.username
@@ -707,11 +469,11 @@
                     ];
                 } else {
                     console.error('Failed to load responsible users:', data.message);
-                    responsibleOptions = [{ value: '', label: 'Select Responsible' }];
+                    responsibleOptions = [{ value: '', label: 'Selecionar Responsável' }];
                 }
             } catch (error) {
                 console.error('Error loading responsible users:', error);
-                responsibleOptions = [{ value: '', label: 'Select Responsible' }];
+                responsibleOptions = [{ value: '', label: 'Selecionar Responsável' }];
             }
         }
 
@@ -1116,328 +878,105 @@
             const detailsContent = document.getElementById('ticketDetailsContent');
             const detailsHeader = document.getElementById('ticketDetailsHeader');
             let content = '';
-            let headerText = '';
+
+            const typeLabels = {
+                'MTSE': 'Segurança',
+                'MTQA': 'Qualidade',
+                'MTEX': 'Excelência Operacional',
+                'MTREP': 'Reparações Eletrónicas'
+            };
 
             const safeValue = (value) => {
-                if (value === null || value === undefined || value === '') {
-                    return 'N/A';
-                }
+                if (value === null || value === undefined || value === '') return 'N/A';
                 return escapeHtml(String(value));
             };
 
-            const safeData = {
-                internal_code: safeValue(ticketData.internal_code),
-                title: safeValue(ticketData.title),
-                requester: safeValue(ticketData.requester),
-                prod_line: safeValue(ticketData.prod_line),
-                n_sap: safeValue(ticketData.n_sap),
-                reason: safeValue(ticketData.reason),
-                current_process: safeValue(ticketData.current_process),
-                action_to_improve: safeValue(ticketData.action_to_improve),
-                observations_requester: safeValue(ticketData.observations_requester),
-                department: safeValue(ticketData.department),
-                objective: safeValue(ticketData.objective),
-                app_name: safeValue(ticketData.app_name),
-                issue: safeValue(ticketData.issue),
-                expected_date: safeValue(ticketData.expected_date),
-                status: ticketData.status !== null && ticketData.status !== undefined ? parseInt(ticketData.status) : 0,
-                filename: safeValue(ticketData.filename),
-                responsible: safeValue(ticketData.responsible),
-                notes: safeValue(ticketData.notes),
-                subcategory: safeValue(ticketData.subcategory),
-                eight_d_number: safeValue(ticketData['8D_Number']),
-                complaint_number: safeValue(ticketData.complaint_number),
-                hard_savings: ticketData.hard_savings ? `€ ${parseFloat(ticketData.hard_savings).toLocaleString('pt-PT', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : 'N/A',
-                other_description: safeValue(ticketData.other_description),
-                priority: safeValue(ticketData.priority)
+            const formatDate = (dateValue) => {
+                if (!dateValue) return 'N/A';
+                if (typeof dateValue === 'string' && dateValue.includes('-')) {
+                    const parts = dateValue.split(' ')[0].split('-');
+                    if (parts.length === 3) {
+                        const [y, m, d] = parts;
+                        return `${d}/${m}/${y}`;
+                    }
+                }
+                return String(dateValue);
             };
 
-            const getStatusBadge = (status) => {
-                if (status === 0) return '<span class="status-badge status-waiting">Waiting</span>';
+            const getStatusBadge = (status, approved) => {
+                if (status === 2) return '<span class="status-badge status-done">Done</span>';
                 if (status === 1) return '<span class="status-badge status-approved">In Progress</span>';
-                if (status === 2) return '<span class="status-badge status-done">Completed</span>';
-                if (status === 3) return '<span class="status-badge status-under-analysis">Under Analysis</span>';
-                if (status === 4) return '<span class="status-badge status-in-progress">Waiting from DT</span>';
-                if (status === 5) return '<span class="status-badge status-in-progress">Waiting from Requester</span>';
-                if (status === 6) return '<span class="status-badge status-in-progress">Waiting for Line</span>';
-                if (status === 7) return '<span class="status-badge status-in-progress">Waiting Maintenance</span>';
-                if (status === -1) return '<span class="status-badge status-rejected">Rejected</span>';
-                return '<span class="status-badge status-being-analyzed">Awaiting Approval</span>';
+                if (approved === 1) return '<span class="status-badge status-approved">To Do</span>';
+                return '<span class="status-badge status-waiting">To Do</span>';
             };
 
             const getFileDisplay = (filename) => {
-                if (filename === 'N/A' || !filename) {
-                    return 'None';
-                }
+                if (!filename || filename === 'N/A') return 'Nenhum';
                 const extension = filename.split('.').pop().toLowerCase();
                 const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
                 const fileUrl = `/Uploads/${encodeURIComponent(filename)}`;
                 if (imageExtensions.includes(extension)) {
                     return `<a href="${fileUrl}" target="_blank"><img src="${fileUrl}" class="thumbnail" alt="${filename}"></a>`;
-                } else {
-                    return `<a href="${fileUrl}" download>${filename}</a>`;
                 }
+                return `<a href="${fileUrl}" download>${filename}</a>`;
             };
 
-            if (ticketType === 'DTAI') {
-                headerText = `Automation Improvement (DTAI) - ${safeData.internal_code}`;
-                content = `
-                    <div class="col-md-6">
-                        <div class="detail-label">Code</div>
-                        <div class="detail-value">${safeData.internal_code}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Requester</div>
-                        <div class="detail-value">${safeData.requester}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Category</div>
-                        <div class="detail-value">${safeData.reason}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Production Line</div>
-                        <div class="detail-value">${safeData.prod_line}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">SAP Nº</div>
-                        <div class="detail-value">${safeData.n_sap}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Status</div>
-                        <div class="detail-value">${getStatusBadge(safeData.status)}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Created At</div>
-                        <div class="detail-value">${safeData.created_at}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Updated At</div>
-                        <div class="detail-value">${safeData.updated_at}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">File</div>
-                        <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
-                    </div>
-                    ${safeData.subcategory !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Subcategory</div><div class="detail-value">${safeData.subcategory}</div></div>` : ''}
-                    ${safeData.eight_d_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">8D Number</div><div class="detail-value">${safeData.eight_d_number}</div></div>` : ''}
-                    ${safeData.complaint_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Complaint Number</div><div class="detail-value">${safeData.complaint_number}</div></div>` : ''}
-                    ${safeData.hard_savings !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Hard Savings</div><div class="detail-value">${safeData.hard_savings}</div></div>` : ''}
-                    <div class="col-md-12">
-                        <div class="detail-label">Title</div>
-                        <div class="detail-value">${safeData.title}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Current Process</div>
-                        <div class="detail-value">${safeData.current_process}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Improvement Action</div>
-                        <div class="detail-value">${safeData.action_to_improve}</div>
-                    </div>
-                    ${safeData.other_description !== 'N/A' ? `<div class="col-md-12"><div class="detail-label">Additional Description</div><div class="detail-value">${safeData.other_description}</div></div>` : ''}
-                `;
-            } else if (ticketType === 'DTAS') {
-                headerText = `Automation Support (DTAS) - ${safeData.internal_code}`;
-                content = `
-                    <div class="col-md-6">
-                        <div class="detail-label">Code</div>
-                        <div class="detail-value">${safeData.internal_code}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Requester</div>
-                        <div class="detail-value">${safeData.requester}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Category</div>
-                        <div class="detail-value">${safeData.reason}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Production Line</div>
-                        <div class="detail-value">${safeData.prod_line}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">SAP Nº</div>
-                        <div class="detail-value">${safeData.n_sap}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Status</div>
-                        <div class="detail-value">${getStatusBadge(safeData.status)}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Created At</div>
-                        <div class="detail-value">${safeData.created_at}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Updated At</div>
-                        <div class="detail-value">${safeData.updated_at}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">File</div>
-                        <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
-                    </div>
-                    ${safeData.subcategory !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Subcategory</div><div class="detail-value">${safeData.subcategory}</div></div>` : ''}
-                    ${safeData.eight_d_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">8D Number</div><div class="detail-value">${safeData.eight_d_number}</div></div>` : ''}
-                    ${safeData.complaint_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Complaint Number</div><div class="detail-value">${safeData.complaint_number}</div></div>` : ''}
-                    ${safeData.hard_savings !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Hard Savings</div><div class="detail-value">${safeData.hard_savings}</div></div>` : ''}
-                    <div class="col-md-12">
-                        <div class="detail-label">Title</div>
-                        <div class="detail-value">${safeData.title}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Current Process</div>
-                        <div class="detail-value">${safeData.current_process}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Corrective Action</div>
-                        <div class="detail-value">${safeData.action_to_improve}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Description</div>
-                        <div class="detail-value">${safeData.observations_requester}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Machine Operational State</div>
-                        <div class="detail-value">${safeData.machine_operational_state || 'N/A'}</div>
-                    </div>
-                    ${safeData.other_description !== 'N/A' ? `<div class="col-md-12"><div class="detail-label">Additional Description</div><div class="detail-value">${safeData.other_description}</div></div>` : ''}
-                `;
-            } else if (ticketType === 'DTNA') {
-                headerText = `New Platform Software Development (DTNA) - ${safeData.internal_code}`;
-                content = `
-                    <div class="col-md-6">
-                        <div class="detail-label">Code</div>
-                        <div class="detail-value">${safeData.internal_code}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Requester</div>
-                        <div class="detail-value">${safeData.requester}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Department</div>
-                        <div class="detail-value">${safeData.department}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Reason</div>
-                        <div class="detail-value">${safeData.reason}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Status</div>
-                        <div class="detail-value">${getStatusBadge(safeData.status)}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Created At</div>
-                        <div class="detail-value">${safeData.created_at}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Updated At</div>
-                        <div class="detail-value">${safeData.updated_at}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">File</div>
-                        <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Title</div>
-                        <div class="detail-value">${safeData.title}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Current Process</div>
-                        <div class="detail-value">${safeData.current_process}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Objective</div>
-                        <div class="detail-value">${safeData.objective}</div>
-                    </div>
-                `;
-            } else if (ticketType === 'DTSI') {
-                headerText = `Platform Software Bug/Issue (DTSI) - ${safeData.internal_code}`;
-                content = `
-                    <div class="col-md-6">
-                        <div class="detail-label">Code</div>
-                        <div class="detail-value">${safeData.internal_code}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Requester</div>
-                        <div class="detail-value">${safeData.requester}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Application</div>
-                        <div class="detail-value">${safeData.app_name}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Reason</div>
-                        <div class="detail-value">${safeData.reason}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Status</div>
-                        <div class="detail-value">${getStatusBadge(safeData.status)}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">File</div>
-                        <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Created At</div>
-                        <div class="detail-value">${safeData.created_at}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Updated At</div>
-                        <div class="detail-value">${safeData.updated_at}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Title</div>
-                        <div class="detail-value">${safeData.title}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Issue</div>
-                        <div class="detail-value">${safeData.issue}</div>
-                    </div>
-                `;
-            } else if (ticketType === 'DTIR') {
-                headerText = `Software Internal Reports (DTIR) - ${safeData.internal_code}`;
-                content = `
-                    <div class="col-md-6">
-                        <div class="detail-label">Code</div>
-                        <div class="detail-value">${safeData.internal_code}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Requester</div>
-                        <div class="detail-value">${safeData.requester}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Reporter</div>
-                        <div class="detail-value">${safeValue(ticketData.reporter)}</div>
-                    </div>
-                    ${safeData.priority !== 'N/A' ? `<div class="col-md-6">
-                        <div class="detail-label">Priority</div>
-                        <div class="detail-value"><span class="badge bg-${safeData.priority === 'High' ? 'danger' : safeData.priority === 'Medium' ? 'warning' : 'secondary'}">${safeData.priority}</span></div>
-                    </div>` : ''}
-                    <div class="col-md-6">
-                        <div class="detail-label">Status</div>
-                        <div class="detail-value">${getStatusBadge(safeData.status)}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Created At</div>
-                        <div class="detail-value">${safeValue(ticketData.created_at)}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">Updated At</div>
-                        <div class="detail-value">${safeValue(ticketData.updated_at)}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detail-label">File</div>
-                        <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Title</div>
-                        <div class="detail-value">${safeData.title}</div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="detail-label">Description</div>
-                        <div class="detail-value">${safeValue(ticketData.description)}</div>
-                    </div>
-                `;
-            }
+            const hasD3D7 = ticketType === 'MTSE' || ticketType === 'MTQA' || ticketType === 'MTEX';
+            const descriptionLabel = ticketType === 'MTREP' ? 'Descrição do Problema' : 'Descrição do Pretendido';
+
+            const headerText = `${typeLabels[ticketType] || ticketType} - ${safeValue(ticketData.internal_code)}`;
+            content = `
+                <div class="col-md-6">
+                    <div class="detail-label">Código</div>
+                    <div class="detail-value">${safeValue(ticketData.internal_code)}</div>
+                    <div class="detail-label">Tipo</div>
+                    <div class="detail-value">${typeLabels[ticketType] || ticketType}</div>
+                    <div class="detail-label">Título</div>
+                    <div class="detail-value">${safeValue(ticketData.title)}</div>
+                    <div class="detail-label">Linha</div>
+                    <div class="detail-value">${safeValue(ticketData.prod_line)}</div>
+                    <div class="detail-label">Equipamento</div>
+                    <div class="detail-value">${safeValue(ticketData.n_sap)}</div>
+                    <div class="detail-label">Requerente</div>
+                    <div class="detail-value">${safeValue(ticketData.requester_name || ticketData.requester)}</div>
+                    <div class="detail-label">Atualizado em</div>
+                    <div class="detail-value">${formatDate(ticketData.updated_at)}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-label">Estado</div>
+                    <div class="detail-value">${getStatusBadge(ticketData.status, ticketData.approved)}</div>
+                    <div class="detail-label">Responsável</div>
+                    <div class="detail-value">${safeValue(ticketData.responsible_name || ticketData.responsible)}</div>
+                    <div class="detail-label">Data Prevista</div>
+                    <div class="detail-value">${safeValue(ticketData.expected_date)}</div>
+                    ${hasD3D7 ? `
+                    <div class="detail-label">Nº de 8D</div>
+                    <div class="detail-value">${safeValue(ticketData.eight_d_number)}</div>
+                    <div class="detail-label">D3 / D7</div>
+                    <div class="detail-value">${ticketData.d3 ? 'D3 ✓' : ''} ${ticketData.d7 ? 'D7 ✓' : ''}</div>
+                    ` : ''}
+                    <div class="detail-label">CC Emails</div>
+                    <div class="detail-value">${safeValue(ticketData.cc_emails)}</div>
+                    <div class="detail-label">Criado em</div>
+                    <div class="detail-value">${formatDate(ticketData.created_at)}</div>
+                </div>
+                <div class="col-md-12">
+                    <div class="detail-label">${descriptionLabel}</div>
+                    <div class="detail-value">${safeValue(ticketData.description)}</div>
+                </div>
+                <div class="col-md-12">
+                    <div class="detail-label">Notas</div>
+                    <div class="detail-value">${safeValue(ticketData.notes)}</div>
+                </div>
+                <div class="col-md-12">
+                    <div class="detail-label">Observações</div>
+                    <div class="detail-value">${safeValue(ticketData.observations)}</div>
+                </div>
+                <div class="col-md-12">
+                    <div class="detail-label">Anexo</div>
+                    <div class="detail-value">${getFileDisplay(ticketData.filename)}</div>
+                </div>
+            `;
 
             detailsHeader.innerHTML = headerText;
             detailsContent.innerHTML = content;
@@ -1476,5 +1015,4 @@
             });
         }
     </script>
-</body>
 {% endblock %}

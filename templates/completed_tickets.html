@@ -13,77 +13,71 @@
 
 <body>
     <div class="main-container">
-        <!-- Top Controls Section -->
         <div class="top-controls">
             <div class="filter-section">
                 <div>
-                    <label class="form-label">Start Date</label>
+                    <label class="form-label">Data Início</label>
                     <input type="date" id="date_ini" name="date_ini" class="form-control">
                 </div>
                 <div>
-                    <label class="form-label">End Date</label>
+                    <label class="form-label">Data Fim</label>
                     <input type="date" id="date_fim" name="date_fim" class="form-control">
                 </div>
                 <div>
-                    <label class="form-label">Category</label>
+                    <label class="form-label">Filtrar por Categoria</label>
                     <select id="categoryFilter" class="form-select">
-                        <option value="">All Categories</option>
-                        <option value="DTAI">🤖 Automation Improvement</option>
-                        <option value="DTAS">🦾 Automation Support</option>
-                        <option value="DTNA">🧑🏻‍💻 New Platform Software Development/Idea</option>
-                        <option value="DTSI">🐛 Platform Software Improvement/Bug/Issue</option>                        <option value="DTIR">🔐 Software Internal Reports</option>                    </select>
+                        <option value="">Todas as Categorias</option>
+                        <option value="MTSE">🛡️ Segurança</option>
+                        <option value="MTQA">🎯 Qualidade</option>
+                        <option value="MTEX">⚙️ Excelência Operacional</option>
+                        <option value="MTREP">⚡ Reparações Eletrónicas</option>
+                    </select>
                 </div>
                 <div>
-                    <label class="form-label">Responsible</label>
+                    <label class="form-label">Responsável</label>
                     <select id="responsibleFilter" class="form-select" style="min-width: 220px;">
-                        <option value="">All Responsible</option>
+                        <option value="">Todos os Responsáveis</option>
                         {% for resp in responsibles %}
                         <option value="{{ resp }}">{{ resp }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <button type="button" class="filter-btn" onclick="filterTable()">
-                    <i class="fas fa-search me-2"></i>Filter
+                    <i class="fas fa-search me-2"></i>Filtrar
                 </button>
-                <button type="button" class="export-btn float-end" style="background-color: #198754 !important; border-color: #198754 !important;" onclick="exportFiltered()">
-                    <i class="fas fa-file-csv me-2"></i>Export CSV
+                <button type="button" class="export-btn float-end" onclick="exportFiltered()">
+                    <i class="fas fa-file-csv me-2"></i>Exportar CSV
                 </button>
             </div>
         </div>
 
-        {% set dtai = [] %}
-        {% set dtas = [] %}
-        {% set dtna = [] %}
-        {% set dtsi = [] %}
-        {% set dtir = [] %}
+        {% set mtse = [] %}
+        {% set mtqa = [] %}
+        {% set mtex = [] %}
+        {% set mtrep = [] %}
         {% for row in completed_requests %}
-            {% if row.internal_code.startswith('DTAI') %}
-                {% set _ = dtai.append(row) %}
-            {% elif row.internal_code.startswith('DTAS') %}
-                {% set _ = dtas.append(row) %}
-            {% elif row.internal_code.startswith('DTNA') %}
-                {% set _ = dtna.append(row) %}
-            {% elif row.internal_code.startswith('DTSI') %}
-                {% set _ = dtsi.append(row) %}
-            {% elif row.internal_code.startswith('DTIR') %}
-                {% set _ = dtir.append(row) %}
+            {% if row.category == 'MTSE' %}
+                {% set _ = mtse.append(row) %}
+            {% elif row.category == 'MTQA' %}
+                {% set _ = mtqa.append(row) %}
+            {% elif row.category == 'MTEX' %}
+                {% set _ = mtex.append(row) %}
+            {% elif row.category == 'MTREP' %}
+                {% set _ = mtrep.append(row) %}
             {% endif %}
         {% endfor %}
 
-        {% for cat, tickets, table_id, extra in [
-            ('DTAI', dtai, 'dtaiTable', 'prod_line'),
-            ('DTAS', dtas, 'dtasTable', 'prod_line'),
-            ('DTNA', dtna, 'dtnaTable', 'department'),
-            ('DTSI', dtsi, 'dtsiTable', 'app_name')
+        {% for cat, tickets, table_id, label in [
+            ('MTSE', mtse, 'mtseTable', 'Segurança'),
+            ('MTQA', mtqa, 'mtqaTable', 'Qualidade'),
+            ('MTEX', mtex, 'mtexTable', 'Excelência Operacional'),
+            ('MTREP', mtrep, 'mtrepTable', 'Reparações Eletrónicas')
         ] %}
         {% if tickets %}
         <div class="table-section" data-category="{{ cat }}">
             <h2>
-                {{ cat == 'DTAI' and 'Automation Improvement (DTAI)' or
-                   cat == 'DTAS' and 'Automation Support (DTAS)' or
-                   cat == 'DTNA' and 'New Platform Software Development/Idea (DTNA)' or
-                   cat == 'DTSI' and 'Platform Software Improvement/Bug/Issue (DTSI)' }}
-                <span class="table-info">{{ tickets|length }} completed tasks</span>
+                {{ label }} ({{ cat }})
+                <span class="table-info">{{ tickets|length }} tarefas concluídas</span>
             </h2>
             <div class="data-table">
                 <div class="table-responsive">
@@ -93,14 +87,11 @@
                                 <th>Code</th>
                                 <th>Title</th>
                                 <th>Requester</th>
-                                <th>
-                                    {% if cat in ['DTAI', 'DTAS'] %}Line{% elif cat == 'DTNA' %}Department{% else %}Application{% endif %}
-                                </th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
+                                <th>Line</th>
+                                <th>Equipment</th>
+                                <th>Responsável</th>
+                                <th>Completion Date</th>
                                 <th>Time (hours)</th>
-                                <th>Responsible</th>
-                                <th>Observations</th> <!-- NOVA COLUNA -->
                                 <th>Details</th>
                             </tr>
                         </thead>
@@ -108,41 +99,24 @@
                             {% for row in tickets %}
                             <tr>
                                 <td><span class="badge-code">{{ row.internal_code }}</span></td>
-                                <td class="truncate-text" data-full-text="{{ row.title }}">{{ row.title }}</td>
-                                <td class="truncate-text" data-full-text="{{ row.requester }}">{{ row.requester }}</td>
-                                <td class="truncate-text" data-full-text="{{ row[extra] or row.extra or '' }}">
-                                    {% if cat in ['DTAI', 'DTAS'] %}
-                                        {{ row.prod_line or row.extra or '' }}
-                                    {% elif cat == 'DTNA' %}
-                                        {{ row.department or row.extra or '' }}
-                                    {% elif cat == 'DTSI' %}
-                                        {{ row.app_name or '' }}
-                                    {% endif %}
-                                </td>
+                                <td class="truncate-text">{{ row.title or '' }}</td>
+                                <td>{{ row.requester_name or row.requester or '' }}</td>
+                                <td>{{ row.prod_line or '' }}</td>
+                                <td>{{ row.n_sap or '' }}</td>
+                                <td>{{ row.responsible_name or row.responsible or '' }}</td>
                                 <td>
-                                    {% if row.start_date %}
-                                        {{ row.start_date.strftime('%d/%m/%Y') }}
+                                    {% if row.completion_datetime %}
+                                        {{ row.completion_datetime.strftime('%d/%m/%Y') }}
                                     {% else %}
                                         N/A
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if row.end_date %}
-                                        {{ row.end_date.strftime('%d/%m/%Y') }}
+                                    {% if row.time_spent is not none %}
+                                        {{ row.time_spent }}h
                                     {% else %}
                                         N/A
                                     {% endif %}
-                                </td>
-                                <td>
-                                    {% if row.time is not none %}
-                                        {{ (row.time|int if row.time == row.time|int else row.time) }}h
-                                    {% else %}
-                                        N/A
-                                    {% endif %}
-                                </td>
-                                <td class="truncate-text" data-full-text="{{ row.responsible or '' }}">{{ row.responsible or 'N/A' }}</td>
-                                <td class="truncate-text" data-full-text="{{ row.observations or row.observations_requester or '' }}">
-                                    {{ row.observations or row.observations_requester or '' }}
                                 </td>
                                 <td>
                                     <i class="fas fa-eye detail-icon"
@@ -160,634 +134,164 @@
         {% endif %}
         {% endfor %}
 
-        {% if dtir %}
-        <div class="table-section" data-category="DTIR">
-            <h2>
-                Software Internal Reports (DTIR)
-                <span class="table-info">{{ dtir|length }} completed tasks</span>
-            </h2>
-            <div class="data-table">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0 compact-table" id="dtirTable">
-                        <thead>
-                            <tr>
-                                <th>Code</th>
-                                <th>Title</th>
-                                <th>Requester</th>
-                                <th>Start Date</th>
-                                <th>End Date</th>
-                                <th>Time (h)</th>
-                                <th>Responsible</th>
-                                <th>Observations</th>
-                                <th>Details</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for row in dtir %}
-                            <tr>
-                                <td><span class="badge-code">{{ row.internal_code }}</span></td>
-                                <td class="truncate-text" data-full-text="{{ row.title }}">{{ row.title }}</td>
-                                <td>{{ row.requester or 'N/A' }}</td>
-                                <td>{% if row.start_date %}{{ row.start_date.strftime('%d/%m/%Y') if row.start_date.__class__.__name__ == 'datetime' else row.start_date }}{% else %}N/A{% endif %}</td>
-                                <td>{% if row.end_date %}{{ row.end_date.strftime('%d/%m/%Y') if row.end_date.__class__.__name__ == 'datetime' else row.end_date }}{% else %}N/A{% endif %}</td>
-                                <td>{% if row.time is not none %}{{ (row.time|int if row.time == row.time|int else row.time) }}h{% else %}N/A{% endif %}</td>
-                                <td class="truncate-text" data-full-text="{{ row.responsible or '' }}">{{ row.responsible or 'N/A' }}</td>
-                                <td class="truncate-text" data-full-text="{{ row.observations or '' }}">{{ row.observations or '' }}</td>
-                                <td>
-                                    <i class="fas fa-eye detail-icon"
-                                       data-bs-toggle="modal"
-                                       data-bs-target="#ticketDetailModal"
-                                       onclick='showTicketDetails("DTIR", {{ row|tojson|safe }})'></i>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-
-                    </table>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if not dtai and not dtas and not dtna and not dtsi and not dtir %}
+        {% if not mtse and not mtqa and not mtex and not mtrep %}
         <div class="no-tickets">
             <i class="fas fa-clipboard-check"></i>
-            <p>No completed tasks found.</p>
+            <p>Não foram encontrados pedidos concluídos.</p>
         </div>
         {% endif %}
 
-        <!-- Ticket Details Modal -->
         <div class="modal fade" id="ticketDetailModal" tabindex="-1" aria-labelledby="ticketDetailModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="ticketDetailModalLabel">
-                            <i class="fas fa-ticket-alt"></i> Task Details
-                        </h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <h5 class="modal-title" id="ticketDetailModalLabel"><i class="fas fa-ticket-alt"></i> Detalhes do Pedido</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                     </div>
-                    <div class="modal-body">
-                        <div class="ticket-details-container">
-                            <div class="ticket-details-header" id="ticketDetailsHeader"></div>
-                            <div id="ticketDetailsContent" class="row"></div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                            <i class="fas fa-times me-2"></i>Close
-                        </button>
-                    </div>
+                    <div class="modal-body"><div class="ticket-details-container"><div class="ticket-details-header" id="ticketDetailsHeader"></div><div id="ticketDetailsContent" class="row"></div></div></div>
+                    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Fechar</button></div>
                 </div>
             </div>
         </div>
 
-        <style>
-            .thumbnail {
-                max-width: 100px;
-                max-height: 100px;
-                object-fit: cover;
-                cursor: pointer;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-            }
-            /* Removido o CSS do SweetAlert2 Toastr, pois já está no static/global */
-        </style>
+    <script>
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') return unsafe || 'N/A';
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <script>
-            // Toastr-like SweetAlert2 toast
-            function notify(type, msg) {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: type,
-                    title: msg,
-                    showConfirmButton: false,
-                    timer: 3500,
-                    timerProgressBar: true,
-                    customClass: {
-                        popup: 'swal2-toastr-popup'
-                    },
-                    didOpen: (toast) => {
-                        toast.addEventListener('mouseenter', Swal.stopTimer);
-                        toast.addEventListener('mouseleave', Swal.resumeTimer);
-                    }
-                });
-            }
-
-            $(document).ready(function() {
-                // Truncate text in table cells
-                const maxLength = 50;
-                document.querySelectorAll('.truncate-text').forEach(cell => {
-                    const fullText = cell.getAttribute('data-full-text') || cell.textContent;
-                    if (fullText.length > maxLength) {
-                        cell.textContent = fullText.substring(0, maxLength - 3) + '...';
-                    }
-                });
-
-                $('#dataTable').DataTable({
-                    "pageLength": 25,
-                    "order": [[ 0, "desc" ]],
-                    "columnDefs": [
-                        { "orderable": false, "targets": [7] }
-                    ]
-                });
-            });
-
-            function formatTime(time) {
-                if (!time || time === 'N/A' || time === null || time === undefined || time === '') {
-                    return 'N/A';
+        function formatDate(dateValue) {
+            if (!dateValue) return 'N/A';
+            if (typeof dateValue === 'string' && dateValue.includes('-')) {
+                const parts = dateValue.split(' ')[0].split('-');
+                if (parts.length === 3) {
+                    const [y, m, d] = parts;
+                    return `${d}/${m}/${y}`;
                 }
-                const num = parseFloat(time);
-                if (isNaN(num)) return 'N/A';
-                if (num % 1 === 0) {
-                    return Math.floor(num) + 'h';
-                } else {
-                    return num + 'h';
-                }
+                return dateValue;
             }
+            return String(dateValue);
+        }
 
-            function getFileDisplay(filename) {
-                if (!filename || filename === 'N/A' || filename === 'None' || filename === 'null' || filename === 'undefined') {
-                    return 'None';
-                }
+        function showTicketDetails(ticketType, ticketData) {
+            const detailsContent = document.getElementById('ticketDetailsContent');
+            const detailsHeader = document.getElementById('ticketDetailsHeader');
+
+            const typeLabels = {
+                'MTSE': 'Segurança',
+                'MTQA': 'Qualidade',
+                'MTEX': 'Excelência Operacional',
+                'MTREP': 'Reparações Eletrónicas'
+            };
+
+            const safeValue = (value) => {
+                if (value === null || value === undefined || value === '') return 'N/A';
+                return escapeHtml(String(value));
+            };
+
+            const getStatusBadge = (status, approved) => {
+                if (status === 2) return '<span class="status-badge status-done">Done</span>';
+                if (status === 1) return '<span class="status-badge status-approved">In Progress</span>';
+                if (approved === 1) return '<span class="status-badge status-waiting">To Do</span>';
+                return '<span class="status-badge status-waiting">To Do</span>';
+            };
+
+            const getFileDisplay = (filename) => {
+                if (!filename || filename === 'N/A') return 'Nenhum';
                 const extension = filename.split('.').pop().toLowerCase();
                 const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
                 const fileUrl = `/Uploads/${encodeURIComponent(filename)}`;
                 if (imageExtensions.includes(extension)) {
                     return `<a href="${fileUrl}" target="_blank"><img src="${fileUrl}" class="thumbnail" alt="${filename}"></a>`;
-                } else {
-                    return `<a href="${fileUrl}" download>${filename}</a>`;
                 }
-            }
+                return `<a href="${fileUrl}" download>${filename}</a>`;
+            };
 
-            // Função aprimorada para formatar datas no formato DD/MM/YYYY
-            function formatDateBR(dateValue) {
-                if (!dateValue || dateValue === 'N/A' || dateValue === null || dateValue === undefined || dateValue === '') {
-                    return 'N/A';
+            const hasD3D7 = ticketType === 'MTSE' || ticketType === 'MTQA' || ticketType === 'MTEX';
+            const descriptionLabel = ticketType === 'MTREP' ? 'Descrição do Problema' : 'Descrição do Pretendido';
+
+            let headerText = `${typeLabels[ticketType] || ticketType} - ${safeValue(ticketData.internal_code)}`;
+            let content = `
+                <div class="col-md-6">
+                    <div class="detail-label">Código</div>
+                    <div class="detail-value">${safeValue(ticketData.internal_code)}</div>
+                    <div class="detail-label">Tipo</div>
+                    <div class="detail-value">${typeLabels[ticketType] || ticketType}</div>
+                    <div class="detail-label">Título</div>
+                    <div class="detail-value">${safeValue(ticketData.title)}</div>
+                    <div class="detail-label">Linha</div>
+                    <div class="detail-value">${safeValue(ticketData.prod_line)}</div>
+                    <div class="detail-label">Equipamento</div>
+                    <div class="detail-value">${safeValue(ticketData.n_sap)}</div>
+                    <div class="detail-label">Requerente</div>
+                    <div class="detail-value">${safeValue(ticketData.requester_name || ticketData.requester)}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-label">Estado</div>
+                    <div class="detail-value">${getStatusBadge(ticketData.status, ticketData.approved)}</div>
+                    <div class="detail-label">Responsável</div>
+                    <div class="detail-value">${safeValue(ticketData.responsible_name || ticketData.responsible)}</div>
+                    <div class="detail-label">Data Prevista</div>
+                    <div class="detail-value">${safeValue(ticketData.expected_date)}</div>
+                    ${hasD3D7 ? `
+                    <div class="detail-label">Nº de 8D</div>
+                    <div class="detail-value">${safeValue(ticketData.eight_d_number)}</div>
+                    <div class="detail-label">D3 / D7</div>
+                    <div class="detail-value">${ticketData.d3 ? 'D3 ✓' : ''} ${ticketData.d7 ? 'D7 ✓' : ''}</div>
+                    ` : ''}
+                    <div class="detail-label">CC Emails</div>
+                    <div class="detail-value">${safeValue(ticketData.cc_emails)}</div>
+                    <div class="detail-label">Data Conclusão</div>
+                    <div class="detail-value">${formatDate(ticketData.completion_datetime)}</div>
+                    <div class="detail-label">Tempo Gasto</div>
+                    <div class="detail-value">${ticketData.time_spent ? ticketData.time_spent + 'h' : 'N/A'}</div>
+                </div>
+                <div class="col-md-12">
+                    <div class="detail-label">${descriptionLabel}</div>
+                    <div class="detail-value">${safeValue(ticketData.description)}</div>
+                </div>
+                <div class="col-md-12">
+                    <div class="detail-label">Notas</div>
+                    <div class="detail-value">${safeValue(ticketData.notes)}</div>
+                </div>
+                <div class="col-md-12">
+                    <div class="detail-label">Observações</div>
+                    <div class="detail-value">${safeValue(ticketData.observations)}</div>
+                </div>
+                <div class="col-md-12">
+                    <div class="detail-label">Anexo</div>
+                    <div class="detail-value">${getFileDisplay(ticketData.filename)}</div>
+                </div>
+            `;
+
+            detailsHeader.innerHTML = headerText;
+            detailsContent.innerHTML = content;
+        }
+
+        function filterTable() {
+            const dateIni = document.getElementById('date_ini').value;
+            const dateFim = document.getElementById('date_fim').value;
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            const responsibleFilter = document.getElementById('responsibleFilter').value;
+
+            document.querySelectorAll('.table-section').forEach(section => {
+                const category = section.dataset.category;
+
+                if (categoryFilter && category !== categoryFilter) {
+                    section.style.display = 'none';
+                    return;
                 }
-                
-                let dateStr = String(dateValue).trim();
-                
-                // Se já está no formato DD/MM/YYYY, retorna como está
-                if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-                    return dateStr;
-                }
-                
-                // Se está no formato ISO (YYYY-MM-DD) ou similar
-                if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-                    const onlyDate = dateStr.slice(0, 10); // Pega apenas YYYY-MM-DD
-                    const [year, month, day] = onlyDate.split('-');
-                    if (year && month && day) {
-                        return `${day}/${month}/${year}`;
-                    }
-                }
-                
-                // Tenta criar um objeto Date e formatar
-                try {
-                    const date = new Date(dateStr);
-                    if (!isNaN(date.getTime())) {
-                        const day = String(date.getDate()).padStart(2, '0');
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const year = date.getFullYear();
-                        return `${day}/${month}/${year}`;
-                    }
-                } catch (error) {
-                    console.log('Error formatting date:', dateStr, error);
-                }
-                
-                return dateStr; // Retorna o valor original se não conseguir formatar
-            }
+                section.style.display = 'block';
+            });
+        }
 
-            function escapeHtml(unsafe) {
-                if (typeof unsafe !== 'string') return unsafe || 'N/A';
-                return unsafe
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
-            }
-
-            function showTicketDetails(ticketType, ticketData) {
-
-                const detailsContent = document.getElementById('ticketDetailsContent');
-                const detailsHeader = document.getElementById('ticketDetailsHeader');
-                let content = '';
-                let headerText = '';
-
-                try {
-                    let parsedData = ticketData;
-                    if (typeof ticketData === 'string') {
-                        try {
-                            parsedData = JSON.parse(ticketData);
-                        } catch (parseError) {
-                            console.error('JSON parse error:', parseError);
-                            notify('error', 'Invalid ticket data format');
-                            throw new Error('Invalid ticket data format');
-                        }
-                    }
-
-                    const safeValue = (value) => {
-                        if (value === null || value === undefined || value === '') {
-                            return 'N/A';
-                        }
-                        return escapeHtml(String(value));
-                    };
-
-                    const safeData = {
-                        internal_code: safeValue(parsedData.internal_code),
-                        title: safeValue(parsedData.title),
-                        requester: safeValue(parsedData.requester),
-                        prod_line: safeValue(parsedData.prod_line),
-                        equipamentSAP: safeValue(parsedData.equipamentSAP || parsedData.n_sap),
-                        reason: safeValue(parsedData.reason),
-                        current_process: safeValue(parsedData.current_process),
-                        action_to_improve: safeValue(parsedData.action_to_improve),
-                        corrective_process: safeValue(parsedData.corrective_process),
-                        department: safeValue(parsedData.department),
-                        improvement_process: safeValue(parsedData.improvement_process),
-                        app_name: safeValue(parsedData.app_name),
-                        issue: safeValue(parsedData.issue),
-                        // Aplica formatação DD/MM/YYYY para todas as datas
-                        start_date: formatDateBR(parsedData.start_date),
-                        end_date: formatDateBR(parsedData.end_date),
-                        time: formatTime(parsedData.time),
-                        responsible: safeValue(parsedData.responsible),
-                        priority: safeValue(parsedData.priority),
-                        status: parsedData.status !== null && parsedData.status !== undefined ? Number(parsedData.status) : 2, // Default 2 for completed tickets
-                        filename: safeValue(parsedData.filename),
-                        observations: safeValue(parsedData.observations || parsedData.observations_requester),
-                        subcategory: safeValue(parsedData.subcategory),
-                        eight_d_number: safeValue(parsedData['8D_Number']),
-                        complaint_number: safeValue(parsedData.complaint_number),
-                        hard_savings: parsedData.hard_savings ? `€ ${parseFloat(parsedData.hard_savings).toLocaleString('pt-PT', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : 'N/A',
-                        other_description: safeValue(parsedData.other_description)
-                    };
-
-                    const getStatusBadge = (status) => {
-                        if (status === 0) return '<span class="status-badge status-waiting">Waiting</span>';
-                        if (status === 1) return '<span class="status-badge status-approved">In Progress</span>';
-                        if (status === 2) return '<span class="status-badge status-done">Completed</span>';
-                        if (status === 3) return '<span class="status-badge status-under-analysis">Under Analysis</span>';
-                        if (status === 4) return '<span class="status-badge status-in-progress">Waiting from DT</span>';
-                        if (status === 5) return '<span class="status-badge status-in-progress">Waiting from Requester</span>';
-                        if (status === 6) return '<span class="status-badge status-in-progress">Waiting for Line</span>';
-                        if (status === 7) return '<span class="status-badge status-in-progress">Waiting Maintenance</span>';
-                        if (status === -1) return '<span class="status-badge status-rejected">Rejected</span>';
-                        return '<span class="status-badge status-being-analyzed">Awaiting Approval</span>';
-                    };
-
-                    if (ticketType === 'DTAI') {
-                        headerText = `Automation Improvement (DTAI) - ${safeData.internal_code}`;
-                        content = `
-                            <div class="col-md-6">
-                                <div class="detail-label">Code</div>
-                                <div class="detail-value">${safeData.internal_code}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Production Line</div>
-                                <div class="detail-value">${safeData.prod_line}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Equipment SAP Nº</div>
-                                <div class="detail-value">${safeData.equipamentSAP}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Reason</div>
-                                <div class="detail-value">${safeData.reason}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Status</div>
-                                <div class="detail-value">${getStatusBadge(safeData.status)}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Start Date</div>
-                                <div class="detail-value">${safeData.start_date}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">End Date</div>
-                                <div class="detail-value">${safeData.end_date}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Time (hours)</div>
-                                <div class="detail-value">${safeData.time}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">File</div>
-                                <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
-                            </div>
-                            ${safeData.subcategory !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Subcategory</div><div class="detail-value">${safeData.subcategory}</div></div>` : ''}
-                            ${safeData.eight_d_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">8D Number</div><div class="detail-value">${safeData.eight_d_number}</div></div>` : ''}
-                            ${safeData.hard_savings !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Hard Savings</div><div class="detail-value">${safeData.hard_savings}</div></div>` : ''}
-                            ${safeData.complaint_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Complaint Number</div><div class="detail-value">${safeData.complaint_number}</div></div>` : ''}
-                            <div class="col-md-12">
-                                <div class="detail-label">Title</div>
-                                <div class="detail-value">${safeData.title}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Current Process</div>
-                                <div class="detail-value">${safeData.current_process}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Improvement Action</div>
-                                <div class="detail-value">${safeData.action_to_improve}</div>
-                            </div>
-                            ${safeData.other_description !== 'N/A' ? `<div class="col-md-12"><div class="detail-label">Additional Description</div><div class="detail-value">${safeData.other_description}</div></div>` : ''}
-                            <div class="col-md-12">
-                                <div class="detail-label">Observations</div>
-                                <div class="detail-value">${safeData.observations}</div>
-                            </div>
-                        `;
-                    } else if (ticketType === 'DTAS') {
-                        headerText = `Automation Support (DTAS) - ${safeData.internal_code}`;
-                        content = `
-                            <div class="col-md-6">
-                                <div class="detail-label">Code</div>
-                                <div class="detail-value">${safeData.internal_code}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Production Line</div>
-                                <div class="detail-value">${safeData.prod_line}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Equipment SAP Nº</div>
-                                <div class="detail-value">${safeData.equipamentSAP}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Reason</div>
-                                <div class="detail-value">${safeData.reason}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Status</div>
-                                <div class="detail-value">${getStatusBadge(safeData.status)}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Start Date</div>
-                                <div class="detail-value">${safeData.start_date}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">End Date</div>
-                                <div class="detail-value">${safeData.end_date}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Time (hours)</div>
-                                <div class="detail-value">${safeData.time}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">File</div>
-                                <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
-                            </div>
-                            ${safeData.subcategory !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Subcategory</div><div class="detail-value">${safeData.subcategory}</div></div>` : ''}
-                            ${safeData.eight_d_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">8D Number</div><div class="detail-value">${safeData.eight_d_number}</div></div>` : ''}
-                            ${safeData.hard_savings !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Hard Savings</div><div class="detail-value">${safeData.hard_savings}</div></div>` : ''}
-                            ${safeData.complaint_number !== 'N/A' ? `<div class="col-md-6"><div class="detail-label">Complaint Number</div><div class="detail-value">${safeData.complaint_number}</div></div>` : ''}
-                            <div class="col-md-12">
-                                <div class="detail-label">Title</div>
-                                <div class="detail-value">${safeData.title}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Current Process</div>
-                                <div class="detail-value">${safeData.current_process}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Corrective Action</div>
-                                <div class="detail-value">${safeData.corrective_process}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Description</div>
-                                <div class="detail-value">${safeData.observations}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Machine Operational State</div>
-                                <div class="detail-value">${safeData.machine_operational_state || 'N/A'}</div>
-                            </div>
-                            ${safeData.other_description !== 'N/A' ? `<div class="col-md-12"><div class="detail-label">Additional Description</div><div class="detail-value">${safeData.other_description}</div></div>` : ''}
-                        `;
-                    } else if (ticketType === 'DTNA') {
-                        headerText = `New Platform Software Development/Idea (DTNA) - ${safeData.internal_code}`;
-                        content = `
-                            <div class="col-md-6">
-                                <div class="detail-label">Code</div>
-                                <div class="detail-value">${safeData.internal_code}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Department</div>
-                                <div class="detail-value">${safeData.department}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Reason</div>
-                                <div class="detail-value">${safeData.reason}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Status</div>
-                                <div class="detail-value">${getStatusBadge(safeData.status)}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Start Date</div>
-                                <div class="detail-value">${safeData.start_date}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">End Date</div>
-                                <div class="detail-value">${safeData.end_date}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Time (hours)</div>
-                                <div class="detail-value">${safeData.time}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">File</div>
-                                <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Title</div>
-                                <div class="detail-value">${safeData.title}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Current Process</div>
-                                <div class="detail-value">${safeData.current_process}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Improvement to be Implemented</div>
-                                <div class="detail-value">${safeData.improvement_process}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Observations</div>
-                                <div class="detail-value">${safeData.observations}</div>
-                            </div>
-                        `;
-                    } else if (ticketType === 'DTSI') {
-                        headerText = `Platform Software Improvement/Bug/Issue (DTSI) - ${safeData.internal_code}`;
-                        content = `
-                            <div class="col-md-6">
-                                <div class="detail-label">Code</div>
-                                <div class="detail-value">${safeData.internal_code}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Application</div>
-                                <div class="detail-value">${safeData.app_name}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Reason</div>
-                                <div class="detail-value">${safeData.reason}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Status</div>
-                                <div class="detail-value">${getStatusBadge(safeData.status)}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Start Date</div>
-                                <div class="detail-value">${safeData.start_date}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">End Date</div>
-                                <div class="detail-value">${safeData.end_date}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Time (hours)</div>
-                                <div class="detail-value">${safeData.time}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">File</div>
-                                <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Title</div>
-                                <div class="detail-value">${safeData.title}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Issue</div>
-                                <div class="detail-value">${safeData.issue}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Observations</div>
-                                <div class="detail-value">${safeData.observations}</div>
-                            </div>
-                        `;
-                    } else if (ticketType === 'DTIR') {
-                        headerText = `Software Internal Report (DTIR) - ${safeData.internal_code}`;
-                        content = `
-                            <div class="col-md-6">
-                                <div class="detail-label">Code</div>
-                                <div class="detail-value">${safeData.internal_code}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Requester</div>
-                                <div class="detail-value">${safeData.requester || 'N/A'}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Requested By</div>
-                                <div class="detail-value">${escapeHtml(String(ticketData.reporter || 'N/A'))}</div>
-                            </div>
-                            ${safeData.priority !== 'N/A' ? `<div class="col-md-6">
-                                <div class="detail-label">Priority</div>
-                                <div class="detail-value"><span class="badge bg-${safeData.priority === 'High' ? 'danger' : safeData.priority === 'Medium' ? 'warning' : 'secondary'}">${safeData.priority}</span></div>
-                            </div>` : ''}
-                            <div class="col-md-6">
-                                <div class="detail-label">Status</div>
-                                <div class="detail-value">${getStatusBadge(safeData.status)}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Start Date</div>
-                                <div class="detail-value">${safeData.start_date}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">End Date</div>
-                                <div class="detail-value">${safeData.end_date}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">Time (hours)</div>
-                                <div class="detail-value">${safeData.time}</div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="detail-label">File</div>
-                                <div class="detail-value">${getFileDisplay(safeData.filename)}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Title</div>
-                                <div class="detail-value">${safeData.title}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Description</div>
-                                <div class="detail-value">${safeData.action_to_improve}</div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="detail-label">Observations</div>
-                                <div class="detail-value">${safeData.observations}</div>
-                            </div>
-                        `;
-                    }
-
-                    detailsHeader.innerHTML = headerText;
-                    detailsContent.innerHTML = content;
-                } catch (e) {
-                    console.error('Error in showTicketDetails:', e);
-                    notify('error', 'Failed to load ticket details. Please try again.');
-                    detailsHeader.innerHTML = 'Error Loading Ticket';
-                    detailsContent.innerHTML = '<div class="col-12"><p class="text-danger">Failed to load ticket details. Please try again.</p></div>';
-                }
-            }
-
-            function filterTable() {
-                const dateIni = document.getElementById('date_ini').value;
-                const dateFim = document.getElementById('date_fim').value;
-                const categoryFilter = document.getElementById('categoryFilter').value;
-                const responsibleFilter = document.getElementById('responsibleFilter').value;
-
-                const tableSections = document.querySelectorAll('.table-section');
-
-                tableSections.forEach(section => {
-                    const category = section.dataset.category;
-
-                    if (categoryFilter && category !== categoryFilter) {
-                        section.style.display = 'none';
-                        return;
-                    }
-                    section.style.display = 'block';
-
-                    const rows = section.querySelectorAll('tbody tr');
-                    rows.forEach(row => {
-                        const startDateCell = row.querySelector('td:nth-child(5)');
-                        const startDate = startDateCell?.textContent?.trim();
-                        const responsibleCell = row.querySelector('td:nth-child(8)');
-                        const responsible = responsibleCell?.textContent?.trim();
-
-                        let showRow = true;
-
-                        if (dateIni && dateFim && startDate && startDate !== 'N/A') {
-                            // Converte data DD/MM/YYYY para formato Date
-                            const [day, month, year] = startDate.split('/');
-                            const date = new Date(year, month - 1, day);
-                            const ini = new Date(dateIni);
-                            const fim = new Date(dateFim);
-                            if (date < ini || date > fim) {
-                                showRow = false;
-                            }
-                        }
-
-                        if (responsibleFilter && responsible !== responsibleFilter) {
-                            showRow = false;
-                        }
-
-                        row.style.display = showRow ? '' : 'none';
-                    });
-                });
-            }
-            function exportFiltered() {
-                const dateIni = document.getElementById('date_ini').value;
-                const dateFim = document.getElementById('date_fim').value;
-                const categoryFilter = document.getElementById('categoryFilter').value;
-                const responsibleFilter = document.getElementById('responsibleFilter').value;
-
-                const params = new URLSearchParams();
-                if (dateIni) params.append('date_ini', dateIni);
-                if (dateFim) params.append('date_fim', dateFim);
-                if (categoryFilter) params.append('category', categoryFilter);
-                if (responsibleFilter) params.append('responsible', responsibleFilter);
-
-                const url = '/export/completed_automation_tickets?' + params.toString();
-                window.open(url, '_blank');
-            }
-        </script>
-</body>
+        function exportFiltered() {
+            window.open('/export/completed_automation_tickets', '_blank');
+        }
+    </script>
 {% endblock %}
